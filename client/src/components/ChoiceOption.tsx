@@ -103,10 +103,12 @@ export default function ChoiceOption({ option, status, pending = false, onClick,
   const textSize = isCondition ? 'text-sm italic' : 'text-sm font-medium';
 
   // div+role="button" вместо <button>: ChoiceOption содержит вложенные
-  // интерактивные элементы (StatusPicker popover trigger, EditOption кнопки),
-  // а HTML <button> не может содержать другие button → nested button warning
-  // и «съеденные» события на дочерних элементах.
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  // интерактивные элементы (StatusPicker trigger, EditOption кнопки, input'ы),
+  // а HTML <button> не может содержать другие button → nested button warning.
+  // Проверка target===currentTarget: Space/Enter во вложенном input не должны
+  // дёргать выбор родителя (пробел preventDefault'ился и превращался в переход).
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick();

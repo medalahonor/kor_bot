@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { afterEach, beforeEach } from 'vitest';
 import VerseCard from './VerseCard';
+import { useAppStore } from '../stores/app';
 import type { Verse, Option, OptionStatus } from '../lib/types';
 
 function makeOption(overrides: Partial<Option> & { id: number; text: string }): Option {
@@ -724,5 +728,138 @@ describe('VerseCard', () => {
 
     expect(screen.getByText('Нет ресурсов')).toBeInTheDocument();
     expect(screen.queryByText('Посещён')).not.toBeInTheDocument();
+  });
+
+  // --- Keyboard scoping: Space/Enter на вложенных элементах не должны
+  // дёргать onOptionClick родительской карточки. Баг: handleKeyDown на
+  // div role="button" срабатывал без проверки e.target, из-за чего пробел
+  // в EditOption/NumericAutocomplete/StatusPicker Trigger "проваливался"
+  // в выбор строфы.
+  describe('keyboard: вложенные интерактивные элементы не триггерят onOptionClick', () => {
+    function renderInAdmin(option: Option, onOptionClick = vi.fn()) {
+      const verse = makeVerse([option]);
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+      const utils = render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/location/1']}>
+            <Routes>
+              <Route
+                path="/location/:dn"
+                element={
+                  <VerseCard
+                    verse={verse}
+                    statusMap={new Map()}
+                    showOnlyNew={false}
+                    onOptionClick={onOptionClick}
+                    onStatusChange={vi.fn()}
+                  />
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      return { ...utils, onOptionClick };
+    }
+
+    beforeEach(() => {
+      // EditOption делает fetch через useLocations (массив) и
+      // useLocationVerses (объект LocationDetail). Мокаем оба под их формы.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((url: string) => {
+          const body = url.includes('/locations/') && url.includes('/verses')
+            ? { id: 1, displayNumber: 1, name: '', verses: [] }
+            : [];
+          return Promise.resolve({ ok: true, json: async () => body });
+        }),
+      );
+      useAppStore.setState({ adminMode: true });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      useAppStore.setState({ adminMode: false });
+    });
+
+    const makeEditableOption = () =>
+      makeOption({
+        id: 42,
+        text: 'Исходный текст',
+        targetType: 'verse',
+        targetVerseDn: 3,
+      });
+
+    it('UC1: пробел в поле "Текст" EditOption вставляется, onOptionClick не вызывается', async () => {
+      const user = userEvent.setup();
+      const { onOptionClick } = renderInAdmin(makeEditableOption());
+
+      // Открыть форму редактирования (кнопка с символом ✎)
+      await user.click(screen.getByText('✎'));
+
+      const textInput = screen.getByDisplayValue('Исходный текст') as HTMLInputElement;
+      await user.click(textInput);
+      await user.keyboard(' добавка');
+
+      expect(textInput.value).toBe('Исходный текст добавка');
+      expect(onOptionClick).not.toHaveBeenCalled();
+    });
+
+    it('UC2: Enter в input EditOption не триггерит onOptionClick родителя', async () => {
+      const user = userEvent.setup();
+      const { onOptionClick } = renderInAdmin(makeEditableOption());
+
+      await user.click(screen.getByText('✎'));
+      const textInput = screen.getByDisplayValue('Исходный текст');
+      await user.click(textInput);
+      await user.keyboard('{Enter}');
+
+      expect(onOptionClick).not.toHaveBeenCalled();
+    });
+
+    it('UC3 (регрессия): Space на самой карточке ChoiceOption по-прежнему вызывает onOptionClick', () => {
+      const { onOptionClick } = renderInAdmin(makeEditableOption());
+
+      // В admin-режиме role=button имеют несколько элементов
+      // (ChoiceOption div, StatusPicker Trigger, кнопки ✎/✕),
+      // поэтому ищем именно корневой div карточки через текст опции.
+      const card = screen.getByText('Исходный текст').closest('[role="button"]') as HTMLElement;
+      expect(card).not.toBeNull();
+      card.focus();
+      fireEvent.keyDown(card, { key: ' ' });
+
+      expect(onOptionClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('UC4: пробел в NumericAutocomplete внутри EditOption не триггерит onOptionClick родителя', async () => {
+      const user = userEvent.setup();
+      const { onOptionClick } = renderInAdmin(makeEditableOption());
+
+      await user.click(screen.getByText('✎'));
+      // targetType по умолчанию = 'verse' (из option), поэтому
+      // NumericAutocomplete уже отрендерен.
+      const numericInput = screen.getByPlaceholderText('Номер строфы');
+      numericInput.focus();
+      // Прямой keyDown — так как replace(/\D/g, '') в onChange съест пробел,
+      // нас интересует именно всплытие keydown к родителю.
+      fireEvent.keyDown(numericInput, { key: ' ' });
+
+      expect(onOptionClick).not.toHaveBeenCalled();
+    });
+
+    it('UC5: Space на StatusPicker Trigger не триггерит onOptionClick родителя', () => {
+      const { onOptionClick } = renderInAdmin(makeEditableOption());
+
+      const trigger = screen.getByTitle('Изменить статус');
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: ' ' });
+
+      expect(onOptionClick).not.toHaveBeenCalled();
+    });
   });
 });
