@@ -1,0 +1,294 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* ─── База (туман + камень) ─── */
+  --color-bg:           #141a1c;
+  --color-bg-card:      #1c2428;
+  --color-bg-elevated:  #243036;
+
+  /* ─── Текст ─── */
+  --color-text-primary:   #cfd5d0;
+  --color-text-secondary: #a0a8ac;
+  --color-separator:      #2a3640;
+
+  /* ─── Rune (главный акцент — бирюза менгиров, WCAG AAA 7.1:1) ─── */
+  --color-rune:         #5ec8d8;
+  --color-rune-dim:     #5ec8d822;
+  --color-rune-glow:    #5ec8d840;
+
+  /* ─── Choice (дефолтный текст выбора — без голубизны) ─── */
+  --color-choice:       #cfd5d0;
+
+  /* ─── Статусы (семантические, не зависят от темы) ─── */
+  --color-green:        #5e8a6a;   /* moss — visited */
+  --color-green-bright: #7ea888;
+  --color-green-dim:    #5e8a6a22;
+
+  --color-amber:        #c89040;   /* requirements_not_met */
+  --color-amber-dim:    #c8904022;
+
+  --color-red:          #8a2020;   /* blood — closed */
+  --color-red-dim:      #8a202022;
+
+  /* ─── Шрифты ─── */
+  --font-heading: 'Cormorant Infant', serif;
+  --font-body:    'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+
+  /* ─── Motion tokens (единый rhythm интерфейса) ─── */
+  --motion-instant: 100ms;   /* tap feedback */
+  --motion-fast:    150ms;   /* hover, state transitions */
+  --motion-normal:  200ms;   /* стандартные переходы */
+  --motion-slow:    300ms;   /* modal/drawer открытие */
+  --motion-pulse:  1500ms;   /* pending animation */
+
+  --ease-out:      cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in:       cubic-bezier(0.4, 0.0, 1, 1);
+  --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+@theme inline {
+  --font-sans: 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Марь и менгиры — тёмная тема, всегда активна */
+:root {
+  --background: #141a1c;
+  --foreground: #cfd5d0;
+  --card: #1c2428;
+  --card-foreground: #cfd5d0;
+  --popover: #1c2428;
+  --popover-foreground: #cfd5d0;
+  --primary: #5ec8d8;
+  --primary-foreground: #0a1518;
+  --secondary: #243036;
+  --secondary-foreground: #cfd5d0;
+  --muted: #2a3640;
+  --muted-foreground: #a0a8ac;
+  --accent: #5ec8d8;
+  --accent-foreground: #0a1518;
+  --destructive: #8a2020;
+  --border: #2a3640;
+  --input: #2a3640;
+  --ring: #5ec8d8;
+  --chart-1: #5ec8d8;
+  --chart-2: #5e8a6a;
+  --chart-3: #c89040;
+  --chart-4: #cfd5d0;
+  --chart-5: #8a2020;
+  --radius: 0.625rem;
+  --sidebar: #1c2428;
+  --sidebar-foreground: #cfd5d0;
+  --sidebar-primary: #5ec8d8;
+  --sidebar-primary-foreground: #0a1518;
+  --sidebar-accent: #243036;
+  --sidebar-accent-foreground: #cfd5d0;
+  --sidebar-border: #2a3640;
+  --sidebar-ring: #5ec8d8;
+}
+
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    background: var(--color-bg);
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    /* isolation: isolate делает body отдельным stacking context.
+       Это нужно, чтобы body::before (negative z-index) оставался под контентом,
+       но popover-порталы (React Portal → document.body → вне #root) рисовались
+       поверх контента. Без isolation popover «зажимался» между слоями. */
+    isolation: isolate;
+    /* Бирюзовая дымка-свечение от верха и низа экрана —
+       цитирует визуальный язык менгиров на артах игры */
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(94, 200, 216, 0.06), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(94, 200, 216, 0.04), transparent 60%),
+      var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
+  /* Клубы тумана — низкочастотный SVG-шум, растянутый на всю высоту body.
+     background-size: 100% 100% + no-repeat — чтобы не было seam на стыке плиток
+     (turbulence-шум не seamless, при repeat виден вертикальный шов).
+     z-index: -1 + body{isolation:isolate} — туман под контентом без хрупкой
+     штанговки конкурирующими положительными z на #root. */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 0.8 0 0 0 0 0.9 0 0 0 0 0.9 0 0 0 0.14 0'/></filter><rect width='100%25' height='100%25' filter='url(%23f)'/></svg>");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    opacity: 0.55;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Focus ring — только на клавиатурной фокусировке, не на mouse tap */
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-rune);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  .fantasy-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #5ec8d844, transparent);
+    position: relative;
+  }
+
+  .fantasy-divider::after {
+    content: '⟐';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: #5ec8d8aa;
+    background: var(--color-bg);
+    padding: 0 6px;
+    text-shadow: 0 0 4px var(--color-rune-glow);
+  }
+}
+
+::selection {
+  background: rgba(94, 200, 216, 0.3);
+  color: var(--color-text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(94, 200, 216, 0.33);
+  border-radius: 2px;
+}
+
+/* Pulse animation — ТОЛЬКО для pending choice (UX-сигнал «идёт обработка») */
+@keyframes rune-pulse {
+  0%, 100% {
+    box-shadow: 0 0 6px var(--color-rune-glow);
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(94, 200, 216, 0.6);
+    opacity: 1;
+  }
+}
+
+/* Gradient left accent for choice options — полоска на всю высоту кнопки,
+   прямоугольная (как .choice::before в теме 2 mist-menhirs) */
+.choice-accent-default::before,
+.choice-accent-green::before,
+.choice-accent-amber::before,
+.choice-accent-red::before,
+.choice-accent-blue::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  transition: box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+/* Default — static glow (атмосфера «руны светятся», без движения) */
+.choice-accent-default::before {
+  background: linear-gradient(180deg, #7adfee, #5ec8d8);
+  box-shadow: 0 0 6px var(--color-rune-glow);
+}
+
+.choice-accent-green::before {
+  background: linear-gradient(180deg, #7ea888, #5e8a6a);
+}
+.choice-accent-amber::before {
+  background: linear-gradient(180deg, #d4a050, #c89040);
+}
+.choice-accent-red::before {
+  background: linear-gradient(180deg, #a83030, #8a2020);
+}
+
+/* Blue = pending (network в процессе) — ЕДИНСТВЕННОЕ место с pulse-анимацией */
+.choice-accent-blue::before {
+  background: linear-gradient(180deg, #7adfee, #5ec8d8);
+  animation: rune-pulse var(--motion-pulse) var(--ease-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice-accent-blue::before {
+    animation: none;
+    box-shadow: 0 0 10px rgba(94, 200, 216, 0.6);
+  }
+}

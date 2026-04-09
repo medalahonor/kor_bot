@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model campaigns {
+  id        Int         @id @default(autoincrement())
+  source_id Int         @unique
+  name      String
+  locations locations[]
+}
+
+model locations {
+  id             Int        @id @default(autoincrement())
+  campaign_id    Int
+  display_number Int
+  name           String     @default("")
+  campaign       campaigns  @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  verses         verses[]
+
+  @@unique([campaign_id, display_number])
+  @@index([campaign_id])
+}
+
+model verses {
+  id             Int       @id @default(autoincrement())
+  location_id    Int
+  display_number Int
+  location       locations @relation(fields: [location_id], references: [id], onDelete: Cascade)
+  options        options[]
+
+  @@unique([location_id, display_number])
+  @@index([location_id])
+}
+
+model options {
+  id                  Int       @id @default(autoincrement())
+  verse_id            Int
+  position            Int
+  type                String
+  text                String    @default("")
+  target_type         String?
+  target_verse_dn     Int?
+  target_location_dn  Int?
+  requirement         String?
+  result              String?
+  hidden              String?
+  once                Boolean   @default(false)
+  condition_group     String?
+  conditional_targets Json?
+  children            Json?
+  verse               verses    @relation(fields: [verse_id], references: [id], onDelete: Cascade)
+  progress            progress?
+
+  @@unique([verse_id, position])
+  @@index([verse_id])
+}
+
+model progress {
+  id         Int      @id @default(autoincrement())
+  option_id  Int      @unique
+  status     String   @default("visited")
+  visited_at DateTime @default(now()) @db.Timestamptz
+  visited_by BigInt?
+  option     options  @relation(fields: [option_id], references: [id], onDelete: Cascade)
+
+  @@index([option_id])
+}
+
+model users {
+  telegram_id BigInt   @id
+  username    String?
+  role        String   @default("player")
+  created_at  DateTime @default(now()) @db.Timestamptz
+}

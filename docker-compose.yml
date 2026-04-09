@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tg
+      POSTGRES_PASSWORD: tg_dev_password
+      POSTGRES_DB: tainted_grail
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./server/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: pg_isready -U tg -d tainted_grail
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: ./server
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://tg:tg_dev_password@db:5432/tainted_grail
+      NO_AUTH: "1"
+      PORT: "3000"
+      BOT_TOKEN: "dummy"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build: ./client
+    ports:
+      - "127.0.0.1:5173:5173"
+    environment:
+      API_URL: http://server:3000
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

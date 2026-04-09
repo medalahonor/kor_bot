@@ -1,0 +1,13 @@
+.claude/
+data/
+scripts/
+tools/
+todo.md
+CLAUDE.md
+design-previews/
+node_modules/
+
+# Server
+server/node_modules/
+server/dist/
+server/.env
