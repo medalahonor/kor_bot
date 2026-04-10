@@ -30,8 +30,8 @@ export async function buildApp() {
   await app.register(remainingRoutes, { prefix: '/api' });
   await app.register(ksRoutes, { prefix: '/api' });
   await app.register(ekRoutes, { prefix: '/api' });
-  await app.register(adminOptionRoutes, { prefix: '/api' });
-  await app.register(adminVerseRoutes, { prefix: '/api' });
+  await app.register(adminOptionRoutes, { prefix: '/api/admin' });
+  await app.register(adminVerseRoutes, { prefix: '/api/admin' });
 
   // Global error handler
   app.setErrorHandler((error: FastifyError | (Error & { code?: string }), _request, reply) => {
