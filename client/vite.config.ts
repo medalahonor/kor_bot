@@ -7,6 +7,7 @@ import tailwindcss from '@tailwindcss/vite'
 const apiTarget = process.env.API_URL || 'http://localhost:3000'
 
 export default defineConfig({
+  base: './',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

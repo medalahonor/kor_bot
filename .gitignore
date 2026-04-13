@@ -10,4 +10,7 @@ node_modules/
 # Server
 server/node_modules/
 server/dist/
-server/.env
+
+# Root / deploy
+.env
+deploy/nginx.conf

@@ -10,6 +10,7 @@ import { ksRoutes } from './routes/ks.js';
 import { ekRoutes } from './routes/ek.js';
 import { adminOptionRoutes } from './routes/admin/options.js';
 import { adminVerseRoutes } from './routes/admin/verses.js';
+import { healthRoutes } from './routes/health.js';
 import type { FastifyError } from 'fastify';
 
 export async function buildApp() {
@@ -23,6 +24,7 @@ export async function buildApp() {
   await app.register(prismaPlugin);
 
   // Routes
+  await app.register(healthRoutes, { prefix: '/api' });
   await app.register(campaignRoutes, { prefix: '/api' });
   await app.register(locationRoutes, { prefix: '/api' });
   await app.register(progressRoutes, { prefix: '/api' });

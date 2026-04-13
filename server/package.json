@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "dev:noauth": "NO_AUTH=1 tsx watch src/server.ts",
+    "dev": "dotenv -e ../.env -- tsx watch src/server.ts",
+    "dev:noauth": "dotenv -e ../.env -v NO_AUTH=1 -- tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:pull": "prisma db pull",
-    "db:generate": "prisma generate",
+    "db:pull": "dotenv -e ../.env -- prisma db pull",
+    "db:generate": "dotenv -e ../.env -- prisma generate",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "dotenv-cli": "^11.0.0",
     "prisma": "^6.5.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",

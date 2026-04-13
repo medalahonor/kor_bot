@@ -1,12 +1,13 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { ProgressEvent } from '../lib/types';
+import { apiUrl } from './client';
 
 let eventSource: EventSource | null = null;
 
 export function connectSSE(queryClient: QueryClient) {
   if (eventSource) return;
 
-  eventSource = new EventSource('/api/sse/progress');
+  eventSource = new EventSource(apiUrl('/sse/progress'));
 
   eventSource.addEventListener('progress', (e) => {
     const event: ProgressEvent = JSON.parse(e.data);

@@ -20,10 +20,12 @@ const queryClient = new QueryClient({
 
 connectSSE(queryClient);
 
+const basename = new URL(document.baseURI).pathname.replace(/\/$/, '') || '/';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
