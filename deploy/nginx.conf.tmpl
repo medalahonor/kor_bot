@@ -25,7 +25,6 @@ server {
         try_files $uri $uri/ /__URL_PREFIX__/index.html;
         sub_filter '<head>' '<head><base href="/__URL_PREFIX__/">';
         sub_filter_once on;
-        sub_filter_types text/html;
     }
 
     location / { return 404; }
