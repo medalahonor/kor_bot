@@ -20,9 +20,10 @@ for f in /app/migrations/*.sql; do
     continue
   fi
   echo "  → $name"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -v name="$name" \
-    -f "$f" \
-    -c "INSERT INTO schema_migrations (filename) VALUES (:'name')"
+  {
+    cat "$f"
+    printf "INSERT INTO schema_migrations (filename) VALUES ('%s');\n" "$name"
+  } | psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction
 done
 
 echo "Starting server..."
