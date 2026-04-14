@@ -46,7 +46,9 @@ PREFIX_CHANGED=0
 [[ "$OLD_SUM" != "$NEW_SUM" ]] && PREFIX_CHANGED=1
 
 # 5. Поднимаем compose — entrypoint сервера сам применяет миграции
-"${COMPOSE[@]}" up -d --build
+# BuildKit отключён: на этом хосте висит на build-этапе
+DOCKER_BUILDKIT=0 "${COMPOSE[@]}" build --progress plain --pull=false
+"${COMPOSE[@]}" up -d
 
 # 6. Hot-reload nginx при изменении конфига (избегаем рестарта контейнера)
 if [[ $PREFIX_CHANGED == 1 ]]; then
