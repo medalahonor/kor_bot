@@ -3,8 +3,6 @@
 -- Generated from display_ru.json (campaign Kings of Ruin, id=26)
 -- =============================================================================
 
-BEGIN;
-
 -- ---------------------------------------------------------------------------
 -- Schema
 -- ---------------------------------------------------------------------------
@@ -6919,5 +6917,3 @@ SELECT setval('campaigns_id_seq', 1);
 SELECT setval('locations_id_seq', 83);
 SELECT setval('verses_id_seq', 2202);
 SELECT setval('options_id_seq', 4470);
-
-COMMIT;

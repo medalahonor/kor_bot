@@ -29,7 +29,7 @@ fi
 
 # 3. git pull (если в репо)
 if git remote get-url origin &>/dev/null; then
-    git pull --ff-only || echo "WARN: git pull не удался, продолжаем с текущим кодом"
+    git pull --ff-only
 fi
 
 # 4. Генерация nginx.conf — детектим изменения через sha1
