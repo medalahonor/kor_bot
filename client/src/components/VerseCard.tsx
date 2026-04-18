@@ -1,5 +1,5 @@
 import ChoiceOption from './ChoiceOption';
-import type { Verse, Option, OptionStatus } from '../lib/types';
+import type { Verse, Option, OptionStatus } from '@tg/shared';
 
 interface VerseCardProps {
   verse: Verse;

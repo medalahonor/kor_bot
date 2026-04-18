@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { sseBroker } from '../sse/broker.js';
 import { buildGraph } from './graph.js';
 import { findDescendantOptionIds } from './graph-utils.js';
-import type { ProgressEvent, OptionStatus } from '../types/index.js';
+import type { ProgressEvent, OptionStatus } from '@tg/shared';
 
 async function getOptionDetails(prisma: PrismaClient, optionId: number) {
   return prisma.options.findUniqueOrThrow({

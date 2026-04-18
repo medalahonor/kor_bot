@@ -1,9 +1,5 @@
-import type {
-  NodeKey,
-  Graph,
-  PathStep,
-  RemainingOption,
-} from '../types/index.js';
+import type { NodeKey, Graph } from '../types/index.js';
+import type { PathStep, RemainingOption } from '@tg/shared';
 import { getSuccessors } from './graph-utils.js';
 
 export function findRemaining(

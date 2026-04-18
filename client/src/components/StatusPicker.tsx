@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover';
-import type { OptionStatus } from '../lib/types';
+import type { OptionStatus } from '@tg/shared';
 
 interface StatusPickerProps {
   status: OptionStatus;

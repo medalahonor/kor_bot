@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StatusPicker from './StatusPicker';
-import type { OptionStatus } from '../lib/types';
+import type { OptionStatus } from '@tg/shared';
 
 describe('StatusPicker', () => {
   it('рендерит триггер-кнопку', () => {

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { z } from 'zod';
 import { api, apiUrl, setInitData } from './client';
+
+const OkSchema = z.object({ ok: z.literal(true) });
 
 function setBase(href: string) {
   document.head.querySelector('base')?.remove();
@@ -50,14 +53,14 @@ describe('api', () => {
 
   it('вызывает fetch по apiUrl', async () => {
     setBase('http://localhost/SECRET/');
-    await api('/campaigns');
+    await api('/campaigns', OkSchema);
     const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).toBe('http://localhost/SECRET/api/campaigns');
   });
 
   it('добавляет X-Telegram-Init-Data если initData установлен', async () => {
     setInitData('test-init-data');
-    await api('/campaigns');
+    await api('/campaigns', OkSchema);
     const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(init.headers['X-Telegram-Init-Data']).toBe('test-init-data');
   });

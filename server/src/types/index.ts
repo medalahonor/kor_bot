@@ -1,3 +1,5 @@
+// Internal types for graph algorithms. API contracts live in @tg/shared.
+
 export type NodeKey = string; // "locDn:verseDn", e.g. "104:0"
 
 export interface GraphEdge {
@@ -43,43 +45,4 @@ export interface ChildOption {
 export interface Successor {
   type: 'node' | 'end';
   key?: NodeKey;
-}
-
-export interface PathStep {
-  verseDn: number;
-  optionId: number;
-  text: string;
-  position: number;
-  type: string;
-}
-
-export interface RemainingOption {
-  option: {
-    id: number;
-    text: string;
-    type: string;
-    requirement: string | null;
-    position: number;
-  };
-  verseDn: number;
-  pathFromEntry: PathStep[];
-}
-
-export interface PathCount {
-  totalPaths: number;
-  completedPaths: number;
-  totalCyclic: number;
-  completedCyclic: number;
-}
-
-export type OptionStatus = 'available' | 'visited' | 'requirements_not_met' | 'closed';
-
-export interface ProgressEvent {
-  type: 'status_changed';
-  optionId: number;
-  status: OptionStatus;
-  locationDn: number;
-  verseDn: number;
-  by: string; // telegram_id as string (BigInt serialization)
-  timestamp: string;
 }

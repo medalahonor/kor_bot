@@ -8,7 +8,7 @@ import LocationSearchBar from '../components/LocationSearchBar';
 import StateMessage from '../components/StateMessage';
 import { useLocations, useBatchProgress, useKsVerses, useEkData } from '../api/queries';
 import { useAppStore } from '../stores/app';
-import { getContextType, KS_LOCATION_DNS, type ContextType, type Location } from '../lib/types';
+import { getContextType, KS_LOCATION_DNS, type ContextType, type Location } from '@tg/shared';
 import { matchesLocationSearch } from '../lib/formatLocationNumber';
 
 const HIDDEN_LOCATIONS = new Set([1101, 1102, 1103]);

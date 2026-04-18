@@ -1,4 +1,5 @@
-import type { NodeKey, Graph, PathCount } from '../types/index.js';
+import type { NodeKey, Graph } from '../types/index.js';
+import type { PathCount } from '@tg/shared';
 import { getSuccessors } from './graph-utils.js';
 
 export function countPaths(

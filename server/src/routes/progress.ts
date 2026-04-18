@@ -1,42 +1,46 @@
 import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+import {
+  PutProgressContract,
+  PutProgressBatchContract,
+  type PutProgressBody,
+  type PutProgressBatchBody,
+} from '@tg/shared';
+import { route } from '../lib/registerRoute.js';
 import { setOptionStatus, batchSetStatus } from '../services/progress.js';
 import { requireAuth } from '../auth/hooks.js';
 
-const statusEnum = z.enum(['available', 'visited', 'requirements_not_met', 'closed']);
-
-const setStatusSchema = z.object({
-  optionId: z.number().int().positive(),
-  status: statusEnum,
-});
-
-const batchSetStatusSchema = z.object({
-  optionIds: z.array(z.number().int().positive()).min(1).max(50),
-  status: statusEnum,
-});
-
 export async function progressRoutes(app: FastifyInstance) {
-  app.put(
-    '/progress',
-    { preHandler: [requireAuth] },
-    async (request, reply) => {
-      const body = setStatusSchema.parse(request.body);
+  route(
+    app,
+    {
+      method: 'PUT',
+      url: '/progress',
+      schema: PutProgressContract,
+      preHandler: [requireAuth],
+    },
+    async (request) => {
+      const body = request.body as PutProgressBody;
       const telegramId = BigInt(request.telegramUser.id);
 
       await setOptionStatus(app.prisma, body.optionId, body.status, telegramId);
-      return reply.send({ ok: true });
+      return { ok: true as const };
     },
   );
 
-  app.put(
-    '/progress/batch',
-    { preHandler: [requireAuth] },
-    async (request, reply) => {
-      const body = batchSetStatusSchema.parse(request.body);
+  route(
+    app,
+    {
+      method: 'PUT',
+      url: '/progress/batch',
+      schema: PutProgressBatchContract,
+      preHandler: [requireAuth],
+    },
+    async (request) => {
+      const body = request.body as PutProgressBatchBody;
       const telegramId = BigInt(request.telegramUser.id);
 
       await batchSetStatus(app.prisma, body.optionIds, body.status, telegramId);
-      return reply.send({ ok: true, count: body.optionIds.length });
+      return { ok: true as const, count: body.optionIds.length };
     },
   );
 }

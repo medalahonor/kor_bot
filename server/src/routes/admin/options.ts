@@ -1,50 +1,26 @@
 import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+import {
+  UpdateOptionContract,
+  CreateOptionContract,
+  DeleteOptionContract,
+  type UpdateOptionBody,
+  type CreateOptionBody,
+} from '@tg/shared';
+import { route } from '../../lib/registerRoute.js';
 import { requireAdmin } from '../../auth/hooks.js';
 
-const updateOptionSchema = z.object({
-  text: z.string().optional(),
-  type: z.enum(['choice', 'condition']).optional(),
-  targetType: z.enum(['verse', 'cross_location', 'end']).nullable().optional(),
-  targetVerseDn: z.number().int().nullable().optional(),
-  targetLocationDn: z.number().int().nullable().optional(),
-  requirement: z.string().nullable().optional(),
-  result: z.string().nullable().optional(),
-  hidden: z
-    .enum(['red_filter', 'blue_filter', 'both_filters', 'filter'])
-    .nullable()
-    .optional(),
-  once: z.boolean().optional(),
-  conditionGroup: z.string().nullable().optional(),
-  conditionalTargets: z.any().nullable().optional(),
-  children: z.any().nullable().optional(),
-});
-
-const createOptionSchema = z.object({
-  type: z.enum(['choice', 'condition']),
-  text: z.string().default(''),
-  targetType: z.enum(['verse', 'cross_location', 'end']).nullable().default(null),
-  targetVerseDn: z.number().int().nullable().default(null),
-  targetLocationDn: z.number().int().nullable().default(null),
-  requirement: z.string().nullable().default(null),
-  result: z.string().nullable().default(null),
-  hidden: z
-    .enum(['red_filter', 'blue_filter', 'both_filters', 'filter'])
-    .nullable()
-    .default(null),
-  once: z.boolean().default(false),
-  conditionGroup: z.string().nullable().default(null),
-  conditionalTargets: z.any().nullable().default(null),
-  children: z.any().nullable().default(null),
-});
-
 export async function adminOptionRoutes(app: FastifyInstance) {
-  app.put<{ Params: { id: string } }>(
-    '/options/:id',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'PUT',
+      url: '/options/:id',
+      schema: UpdateOptionContract,
+      preHandler: [requireAdmin],
+    },
     async (request) => {
-      const id = parseInt(request.params.id, 10);
-      const body = updateOptionSchema.parse(request.body);
+      const { id } = request.params as { id: number };
+      const body = request.body as UpdateOptionBody;
 
       const data: Record<string, unknown> = {};
       if (body.text !== undefined) data.text = body.text;
@@ -60,23 +36,22 @@ export async function adminOptionRoutes(app: FastifyInstance) {
       if (body.conditionalTargets !== undefined) data.conditional_targets = body.conditionalTargets;
       if (body.children !== undefined) data.children = body.children;
 
-      const option = await app.prisma.options.update({
-        where: { id },
-        data,
-      });
-
-      return option;
+      return app.prisma.options.update({ where: { id }, data });
     },
   );
 
-  app.post<{ Params: { verseId: string } }>(
-    '/verses/:verseId/options',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'POST',
+      url: '/verses/:verseId/options',
+      schema: CreateOptionContract,
+      preHandler: [requireAdmin],
+    },
     async (request, reply) => {
-      const verseId = parseInt(request.params.verseId, 10);
-      const body = createOptionSchema.parse(request.body);
+      const { verseId } = request.params as { verseId: number };
+      const body = request.body as CreateOptionBody;
 
-      // Auto-calculate position
       const maxPos = await app.prisma.options.aggregate({
         where: { verse_id: verseId },
         _max: { position: true },
@@ -97,8 +72,8 @@ export async function adminOptionRoutes(app: FastifyInstance) {
           hidden: body.hidden,
           once: body.once,
           condition_group: body.conditionGroup,
-          conditional_targets: body.conditionalTargets ?? undefined,
-          children: body.children ?? undefined,
+          conditional_targets: (body.conditionalTargets ?? undefined) as never,
+          children: (body.children ?? undefined) as never,
         },
       });
 
@@ -106,14 +81,18 @@ export async function adminOptionRoutes(app: FastifyInstance) {
     },
   );
 
-  app.delete<{ Params: { id: string } }>(
-    '/options/:id',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'DELETE',
+      url: '/options/:id',
+      schema: DeleteOptionContract,
+      preHandler: [requireAdmin],
+    },
     async (request) => {
-      const id = parseInt(request.params.id, 10);
-
+      const { id } = request.params as { id: number };
       await app.prisma.options.delete({ where: { id } });
-      return { ok: true };
+      return { ok: true as const };
     },
   );
 }

@@ -1,5 +1,5 @@
 import { Tabs } from '@base-ui/react/tabs';
-import type { ContextType } from '../lib/types';
+import type { ContextType } from '@tg/shared';
 
 const TABS: { id: ContextType; label: string }[] = [
   { id: 'locations', label: 'Локации' },

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import KsVerseCard from './KsVerseCard';
-import type { KsVerseEntry } from '../lib/types';
+import type { KsVerseEntry } from '@tg/shared';
 
 function renderCard(overrides: Partial<KsVerseEntry> = {}) {
   const verse: KsVerseEntry = {

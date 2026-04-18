@@ -3,7 +3,7 @@ import { useParams } from 'react-router';
 import { useUpdateOption, useDeleteOption } from '../../api/admin';
 import { useLocationVerses, useLocations, useVerseNumbers } from '../../api/queries';
 import NumericAutocomplete from './NumericAutocomplete';
-import type { Option } from '../../lib/types';
+import type { Option } from '@tg/shared';
 
 interface EditOptionProps {
   option: Option;

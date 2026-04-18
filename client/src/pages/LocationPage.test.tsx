@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LocationPage from './LocationPage';
 import { useAppStore } from '../stores/app';
-import type { Option } from '../lib/types';
+import type { Option } from '@tg/shared';
 
 // --- Mocks ---
 

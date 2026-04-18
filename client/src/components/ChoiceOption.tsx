@@ -1,7 +1,7 @@
 import { useAppStore } from '../stores/app';
 import EditOption from './admin/EditOption';
 import StatusPicker from './StatusPicker';
-import type { Option, OptionStatus } from '../lib/types';
+import type { Option, OptionStatus } from '@tg/shared';
 import { formatLocationRef } from '../lib/formatLocationNumber';
 
 interface ChoiceOptionProps {

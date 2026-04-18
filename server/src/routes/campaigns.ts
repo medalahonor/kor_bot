@@ -1,20 +1,33 @@
 import type { FastifyInstance } from 'fastify';
+import {
+  GetCampaignsContract,
+  GetCampaignLocationsContract,
+  GetBatchProgressContract,
+} from '@tg/shared';
+import { route } from '../lib/registerRoute.js';
 import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
 
 export async function campaignRoutes(app: FastifyInstance) {
-  app.get('/campaigns', async () => {
-    const campaigns = await app.prisma.campaigns.findMany({
-      select: { id: true, source_id: true, name: true },
-    });
-    return campaigns;
-  });
+  route(
+    app,
+    { method: 'GET', url: '/campaigns', schema: GetCampaignsContract },
+    async () =>
+      app.prisma.campaigns.findMany({
+        select: { id: true, source_id: true, name: true },
+      }),
+  );
 
-  app.get<{ Params: { id: string } }>(
-    '/campaigns/:id/locations/progress',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/campaigns/:id/locations/progress',
+      schema: GetBatchProgressContract,
+    },
     async (request) => {
-      const campaignId = parseInt(request.params.id, 10);
+      const { id: campaignId } = request.params as { id: number };
 
       const locations = await app.prisma.locations.findMany({
         where: { campaign_id: campaignId },
@@ -47,10 +60,15 @@ export async function campaignRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Params: { id: string } }>(
-    '/campaigns/:id/locations',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/campaigns/:id/locations',
+      schema: GetCampaignLocationsContract,
+    },
     async (request, reply) => {
-      const campaignId = parseInt(request.params.id, 10);
+      const { id: campaignId } = request.params as { id: number };
 
       const locations = await app.prisma.locations.findMany({
         where: { campaign_id: campaignId },

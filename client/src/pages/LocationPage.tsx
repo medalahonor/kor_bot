@@ -8,7 +8,7 @@ import StateMessage from '../components/StateMessage';
 import { useLocationVerses, useLocationProgress, useBatchSetStatus, useRemaining, useSetOptionStatus, useEkData } from '../api/queries';
 import { useAppStore } from '../stores/app';
 import { hapticSuccess, hapticLight } from '../lib/telegram';
-import { getContextType, type Option, type OptionStatus } from '../lib/types';
+import { getContextType, type Option, type OptionStatus } from '@tg/shared';
 import { formatLocationNumber } from '../lib/formatLocationNumber';
 
 

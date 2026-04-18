@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach } from 'vitest';
 import VerseCard from './VerseCard';
 import { useAppStore } from '../stores/app';
-import type { Verse, Option, OptionStatus } from '../lib/types';
+import type { Verse, Option, OptionStatus } from '@tg/shared';
 
 function makeOption(overrides: Partial<Option> & { id: number; text: string }): Option {
   return {

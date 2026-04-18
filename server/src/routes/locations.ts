@@ -1,12 +1,23 @@
 import type { FastifyInstance } from 'fastify';
+import {
+  GetLocationVersesContract,
+  GetLocationProgressContract,
+  GetVerseNumbersContract,
+  type OptionStatus,
+} from '@tg/shared';
+import { route } from '../lib/registerRoute.js';
 
 export async function locationRoutes(app: FastifyInstance) {
-  // Get all verses + options for a location
-  app.get<{ Params: { dn: string }; Querystring: { campaign?: string } }>(
-    '/locations/:dn/verses',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/locations/:dn/verses',
+      schema: GetLocationVersesContract,
+    },
     async (request, reply) => {
-      const dn = parseInt(request.params.dn, 10);
-      const campaignId = parseInt(request.query.campaign || '1', 10);
+      const { dn } = request.params as { dn: number };
+      const { campaign: campaignId } = request.query as { campaign: number };
 
       const location = await app.prisma.locations.findUnique({
         where: {
@@ -18,9 +29,7 @@ export async function locationRoutes(app: FastifyInstance) {
         include: {
           verses: {
             include: {
-              options: {
-                orderBy: { position: 'asc' },
-              },
+              options: { orderBy: { position: 'asc' } },
             },
             orderBy: { display_number: 'asc' },
           },
@@ -38,35 +47,39 @@ export async function locationRoutes(app: FastifyInstance) {
         verses: location.verses
           .filter((v) => !(v.display_number === 0 && v.options.length === 0))
           .map((v) => ({
-          id: v.id,
-          displayNumber: v.display_number,
-          options: v.options.map((o) => ({
-            id: o.id,
-            position: o.position,
-            type: o.type,
-            text: o.text,
-            targetType: o.target_type,
-            targetVerseDn: o.target_verse_dn,
-            targetLocationDn: o.target_location_dn,
-            requirement: o.requirement,
-            result: o.result,
-            hidden: o.hidden,
-            once: o.once,
-            conditionGroup: o.condition_group,
-            conditionalTargets: o.conditional_targets,
-            children: o.children,
+            id: v.id,
+            displayNumber: v.display_number,
+            options: v.options.map((o) => ({
+              id: o.id,
+              position: o.position,
+              type: o.type as 'choice' | 'condition',
+              text: o.text,
+              targetType: o.target_type as 'verse' | 'cross_location' | 'end' | null,
+              targetVerseDn: o.target_verse_dn,
+              targetLocationDn: o.target_location_dn,
+              requirement: o.requirement,
+              result: o.result,
+              hidden: o.hidden,
+              once: o.once,
+              conditionGroup: o.condition_group,
+              conditionalTargets: o.conditional_targets,
+              children: o.children,
+            })),
           })),
-        })),
       };
     },
   );
 
-  // Get progress for a location (set of visited option IDs)
-  app.get<{ Params: { dn: string }; Querystring: { campaign?: string } }>(
-    '/locations/:dn/progress',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/locations/:dn/progress',
+      schema: GetLocationProgressContract,
+    },
     async (request, reply) => {
-      const dn = parseInt(request.params.dn, 10);
-      const campaignId = parseInt(request.query.campaign || '1', 10);
+      const { dn } = request.params as { dn: number };
+      const { campaign: campaignId } = request.query as { campaign: number };
 
       const location = await app.prisma.locations.findUnique({
         where: {
@@ -91,11 +104,11 @@ export async function locationRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: 'Location not found' });
       }
 
-      const optionStatuses: Record<number, string> = {};
+      const optionStatuses: Record<string, OptionStatus> = {};
       for (const verse of location.verses) {
         for (const option of verse.options) {
           if (option.progress) {
-            optionStatuses[option.id] = option.progress.status;
+            optionStatuses[String(option.id)] = option.progress.status as OptionStatus;
           }
         }
       }
@@ -104,12 +117,16 @@ export async function locationRoutes(app: FastifyInstance) {
     },
   );
 
-  // Get verse display numbers for a location (lightweight, for autocomplete)
-  app.get<{ Params: { dn: string }; Querystring: { campaign?: string } }>(
-    '/locations/:dn/verse-numbers',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/locations/:dn/verse-numbers',
+      schema: GetVerseNumbersContract,
+    },
     async (request, reply) => {
-      const dn = parseInt(request.params.dn, 10);
-      const campaignId = parseInt(request.query.campaign || '1', 10);
+      const { dn } = request.params as { dn: number };
+      const { campaign: campaignId } = request.query as { campaign: number };
 
       const location = await app.prisma.locations.findUnique({
         where: {

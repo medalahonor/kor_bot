@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import ProgressBar from './ProgressBar';
-import type { Location } from '../lib/types';
+import type { Location } from '@tg/shared';
 import { formatLocationNumber } from '../lib/formatLocationNumber';
 
 interface LocationCardProps {

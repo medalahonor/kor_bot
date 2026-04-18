@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import ProgressBar from './ProgressBar';
-import type { KsVerseEntry } from '../lib/types';
+import type { KsVerseEntry } from '@tg/shared';
 
 interface KsVerseCardProps {
   verse: KsVerseEntry;

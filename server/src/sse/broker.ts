@@ -1,5 +1,5 @@
 import type { FastifyReply } from 'fastify';
-import type { ProgressEvent } from '../types/index.js';
+import { SseEventSchema, type SseEvent } from '@tg/shared';
 
 class SSEBroker {
   private clients = new Set<FastifyReply>();
@@ -30,8 +30,9 @@ class SSEBroker {
     reply.raw.write('event: connected\ndata: {}\n\n');
   }
 
-  broadcast(event: ProgressEvent): void {
-    const data = `event: progress\ndata: ${JSON.stringify(event)}\n\n`;
+  broadcast(event: SseEvent): void {
+    const validated = SseEventSchema.parse(event);
+    const data = `event: progress\ndata: ${JSON.stringify(validated)}\n\n`;
     for (const reply of this.clients) {
       reply.raw.write(data);
     }

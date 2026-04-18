@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { GetKsVersesContract } from '@tg/shared';
+import { route } from '../lib/registerRoute.js';
 import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
@@ -6,17 +8,21 @@ import { countPaths } from '../services/paths.js';
 const KS_LOCATION_DNS = [999, 1001];
 
 export async function ksRoutes(app: FastifyInstance) {
-  app.get<{
-    Params: { id: string };
-    Querystring: { page?: string; limit?: string; search?: string; onlyNew?: string };
-  }>(
-    '/campaigns/:id/ks/verses',
+  route(
+    app,
+    {
+      method: 'GET',
+      url: '/campaigns/:id/ks/verses',
+      schema: GetKsVersesContract,
+    },
     async (request) => {
-      const campaignId = parseInt(request.params.id, 10);
-      const page = Math.max(1, parseInt(request.query.page || '1', 10));
-      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit || '50', 10)));
-      const search = (request.query.search || '').trim();
-      const onlyNew = request.query.onlyNew === 'true';
+      const { id: campaignId } = request.params as { id: number };
+      const { page, limit, search, onlyNew } = request.query as {
+        page: number;
+        limit: number;
+        search?: string;
+        onlyNew: boolean;
+      };
 
       const locations = await app.prisma.locations.findMany({
         where: {
@@ -41,12 +47,10 @@ export async function ksRoutes(app: FastifyInstance) {
         return { verses: [], total: 0, page, limit };
       }
 
-      // Build combined graph for all KS locations
       const allData = new Map<number, LocationData>(
         locations.map((l) => [l.display_number, l]),
       );
-      // Build graph starting from each KS location to ensure all are included
-      const combinedGraph: Map<string, any> = new Map();
+      const combinedGraph: Map<string, unknown> = new Map();
       const combinedCompleted = new Set<number>();
       for (const locDn of KS_LOCATION_DNS) {
         if (!allData.has(locDn)) continue;
@@ -54,10 +58,9 @@ export async function ksRoutes(app: FastifyInstance) {
         for (const [key, node] of g) combinedGraph.set(key, node);
         for (const id of c) combinedCompleted.add(id);
       }
-      const graph = combinedGraph;
+      const graph = combinedGraph as Parameters<typeof countPaths>[0];
       const completedOptionIds = combinedCompleted;
 
-      // Collect all verses with per-verse path counts
       type VerseEntry = {
         verseDn: number;
         locationDn: number;
@@ -71,7 +74,6 @@ export async function ksRoutes(app: FastifyInstance) {
 
       for (const loc of locations) {
         for (const verse of loc.verses) {
-          // Skip empty verse 0
           if (verse.display_number === 0 && verse.options.length === 0) continue;
 
           const start = nodeKey(loc.display_number, verse.display_number);
@@ -84,13 +86,11 @@ export async function ksRoutes(app: FastifyInstance) {
         }
       }
 
-      // Apply filters
       let filtered = allVerses;
 
-      if (search) {
-        filtered = filtered.filter((v) =>
-          String(v.verseDn).startsWith(search),
-        );
+      const searchTrimmed = (search ?? '').trim();
+      if (searchTrimmed) {
+        filtered = filtered.filter((v) => String(v.verseDn).startsWith(searchTrimmed));
       }
 
       if (onlyNew) {

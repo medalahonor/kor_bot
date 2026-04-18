@@ -1,5 +1,5 @@
 import LocationCard from './LocationCard';
-import type { Location } from '../lib/types';
+import type { Location } from '@tg/shared';
 
 interface LocationListProps {
   locations: Location[];

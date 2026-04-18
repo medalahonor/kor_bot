@@ -1,38 +1,45 @@
 import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+import {
+  UpdateVerseContract,
+  CreateVerseContract,
+  DeleteVerseContract,
+  type UpdateVerseBody,
+  type CreateVerseBody,
+} from '@tg/shared';
+import { route } from '../../lib/registerRoute.js';
 import { requireAdmin } from '../../auth/hooks.js';
 
-const updateVerseSchema = z.object({
-  displayNumber: z.number().int().min(0),
-});
-
-const createVerseSchema = z.object({
-  displayNumber: z.number().int().min(0),
-});
-
 export async function adminVerseRoutes(app: FastifyInstance) {
-  app.put<{ Params: { id: string } }>(
-    '/verses/:id',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'PUT',
+      url: '/verses/:id',
+      schema: UpdateVerseContract,
+      preHandler: [requireAdmin],
+    },
     async (request) => {
-      const id = parseInt(request.params.id, 10);
-      const body = updateVerseSchema.parse(request.body);
+      const { id } = request.params as { id: number };
+      const body = request.body as UpdateVerseBody;
 
-      const verse = await app.prisma.verses.update({
+      return app.prisma.verses.update({
         where: { id },
         data: { display_number: body.displayNumber },
       });
-
-      return verse;
     },
   );
 
-  app.post<{ Params: { locationId: string } }>(
-    '/locations/:locationId/verses',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'POST',
+      url: '/locations/:locationId/verses',
+      schema: CreateVerseContract,
+      preHandler: [requireAdmin],
+    },
     async (request, reply) => {
-      const locationId = parseInt(request.params.locationId, 10);
-      const body = createVerseSchema.parse(request.body);
+      const { locationId } = request.params as { locationId: number };
+      const body = request.body as CreateVerseBody;
 
       const verse = await app.prisma.verses.create({
         data: {
@@ -45,14 +52,18 @@ export async function adminVerseRoutes(app: FastifyInstance) {
     },
   );
 
-  app.delete<{ Params: { id: string } }>(
-    '/verses/:id',
-    { preHandler: [requireAdmin] },
+  route(
+    app,
+    {
+      method: 'DELETE',
+      url: '/verses/:id',
+      schema: DeleteVerseContract,
+      preHandler: [requireAdmin],
+    },
     async (request) => {
-      const id = parseInt(request.params.id, 10);
-
+      const { id } = request.params as { id: number };
       await app.prisma.verses.delete({ where: { id } });
-      return { ok: true };
+      return { ok: true as const };
     },
   );
 }

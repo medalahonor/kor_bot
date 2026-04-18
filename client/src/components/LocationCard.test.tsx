@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import LocationCard from './LocationCard';
-import type { Location } from '../lib/types';
+import type { Location } from '@tg/shared';
 
 const mockLocation: Location = {
   id: 1,

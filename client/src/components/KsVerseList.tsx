@@ -1,5 +1,5 @@
 import KsVerseCard from './KsVerseCard';
-import type { KsVerseEntry } from '../lib/types';
+import type { KsVerseEntry } from '@tg/shared';
 
 interface KsVerseListProps {
   verses: KsVerseEntry[];
