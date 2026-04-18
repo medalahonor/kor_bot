@@ -33,6 +33,9 @@ export const PathCountSchema = z.object({
 });
 export type PathCount = z.infer<typeof PathCountSchema>;
 
+export const OkResponseSchema = z.object({ ok: z.literal(true) });
+export type OkResponse = z.infer<typeof OkResponseSchema>;
+
 export const CommonErrorResponses = {
   400: ApiErrorSchema,
   401: ApiErrorSchema,

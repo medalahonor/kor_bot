@@ -1,11 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { GetEkVersesContract } from '@tg/shared';
+import { GetEkVersesContract, EK_LOCATION_DN_LIST } from '@tg/shared';
 import { route } from '../lib/registerRoute.js';
 import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
-
-const EK_LOCATION_DNS = [1201, 1202, 1203, 1204];
 
 export async function ekRoutes(app: FastifyInstance) {
   route(
@@ -21,7 +19,7 @@ export async function ekRoutes(app: FastifyInstance) {
       const locations = await app.prisma.locations.findMany({
         where: {
           campaign_id: campaignId,
-          display_number: { in: EK_LOCATION_DNS },
+          display_number: { in: [...EK_LOCATION_DN_LIST] },
         },
         include: {
           verses: {

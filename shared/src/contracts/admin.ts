@@ -4,6 +4,7 @@ import {
   VerseIdParamsSchema,
   LocationIdParamsSchema,
   CommonErrorResponses,
+  OkResponseSchema,
 } from './_common.js';
 
 const HiddenSchema = z
@@ -63,8 +64,6 @@ export const OptionRowSchema = z.object({
   children: z.unknown().nullable(),
 });
 export type OptionRow = z.infer<typeof OptionRowSchema>;
-
-export const OkResponseSchema = z.object({ ok: z.literal(true) });
 
 export const UpdateOptionContract = {
   params: OptionIdParamsSchema,

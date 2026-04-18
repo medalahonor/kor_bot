@@ -1,11 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { GetKsVersesContract } from '@tg/shared';
+import { GetKsVersesContract, KS_LOCATION_DN_LIST } from '@tg/shared';
 import { route } from '../lib/registerRoute.js';
 import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
-
-const KS_LOCATION_DNS = [999, 1001];
 
 export async function ksRoutes(app: FastifyInstance) {
   route(
@@ -27,7 +25,7 @@ export async function ksRoutes(app: FastifyInstance) {
       const locations = await app.prisma.locations.findMany({
         where: {
           campaign_id: campaignId,
-          display_number: { in: KS_LOCATION_DNS },
+          display_number: { in: [...KS_LOCATION_DN_LIST] },
         },
         include: {
           verses: {
@@ -52,7 +50,7 @@ export async function ksRoutes(app: FastifyInstance) {
       );
       const combinedGraph: Map<string, unknown> = new Map();
       const combinedCompleted = new Set<number>();
-      for (const locDn of KS_LOCATION_DNS) {
+      for (const locDn of KS_LOCATION_DN_LIST) {
         if (!allData.has(locDn)) continue;
         const { graph: g, completedOptionIds: c } = buildGraphWithDeps(locDn, allData);
         for (const [key, node] of g) combinedGraph.set(key, node);
