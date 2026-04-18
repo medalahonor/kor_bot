@@ -11,6 +11,15 @@ node_modules/
 server/node_modules/
 server/dist/
 
+# Shared
+shared/node_modules/
+shared/dist/
+shared/*.tsbuildinfo
+
+# Client
+client/node_modules/
+client/dist/
+
 # Root / deploy
 .env
 deploy/nginx.conf

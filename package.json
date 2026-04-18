@@ -1,0 +1,19 @@
+{
+  "name": "tainted-grail",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build:shared": "npm --workspace @tg/shared run build",
+    "build:server": "npm --workspace tainted-grail-server run build",
+    "build:client": "npm --workspace client run build",
+    "build": "npm run build:shared && npm run build:server && npm run build:client",
+    "test:server": "npm --workspace tainted-grail-server test",
+    "test:client": "npm --workspace client test",
+    "test": "npm run test:server && npm run test:client"
+  }
+}
