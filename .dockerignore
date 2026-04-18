@@ -6,3 +6,7 @@
 **/coverage
 **/.vite
 **/.DS_Store
+**/*.tsbuildinfo
+data
+design-previews
+tools

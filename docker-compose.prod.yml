@@ -16,7 +16,9 @@ services:
 
   server:
     container_name: tainted-grail-server
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     environment:
       DATABASE_URL: postgresql://tg:${DB_PASSWORD}@db:5432/tainted_grail
       NO_AUTH: "1"

@@ -16,7 +16,9 @@ services:
       retries: 10
 
   server:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     ports:
       - "127.0.0.1:3000:3000"
     environment:
@@ -29,7 +31,9 @@ services:
         condition: service_healthy
 
   client:
-    build: ./client
+    build:
+      context: .
+      dockerfile: client/Dockerfile
     ports:
       - "127.0.0.1:5173:5173"
     environment:
