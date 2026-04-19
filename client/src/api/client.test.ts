@@ -20,6 +20,18 @@ describe('apiUrl', () => {
     expect(apiUrl('/campaigns')).toMatch(/\/api\/campaigns$/);
   });
 
+  it('на deep-URL использует <base href="/"> вместо location.href', () => {
+    setBase(new URL('/', window.location.origin).href);
+    window.history.pushState({}, '', '/location/112');
+    try {
+      expect(apiUrl('/locations/112/verses')).toBe(
+        new URL('/api/locations/112/verses', window.location.origin).href,
+      );
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+
   it('учитывает <base href> с префиксом', () => {
     setBase('http://localhost/SECRET/');
     expect(apiUrl('/campaigns')).toBe('http://localhost/SECRET/api/campaigns');

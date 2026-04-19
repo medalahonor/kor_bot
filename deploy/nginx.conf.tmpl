@@ -23,7 +23,7 @@ server {
     location /__URL_PREFIX__/ {
         alias /usr/share/nginx/html/;
         try_files $uri $uri/ /__URL_PREFIX__/index.html;
-        sub_filter '<head>' '<head><base href="/__URL_PREFIX__/">';
+        sub_filter '<base href="/"' '<base href="/__URL_PREFIX__/"';
         sub_filter_once on;
     }
 
