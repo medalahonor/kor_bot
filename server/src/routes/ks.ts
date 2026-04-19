@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { GetKsVersesContract, KS_LOCATION_DN_LIST } from '@tg/shared';
 import { route } from '../lib/registerRoute.js';
-import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
+import {
+  buildCombinedGraphForLocations,
+  nodeKey,
+  isEmptyVerseZero,
+  LOCATIONS_WITH_PROGRESS_INCLUDE,
+} from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
 
@@ -27,17 +32,7 @@ export async function ksRoutes(app: FastifyInstance) {
           campaign_id: campaignId,
           display_number: { in: [...KS_LOCATION_DN_LIST] },
         },
-        include: {
-          verses: {
-            include: {
-              options: {
-                include: { progress: true },
-                orderBy: { position: 'asc' },
-              },
-            },
-            orderBy: { display_number: 'asc' },
-          },
-        },
+        include: LOCATIONS_WITH_PROGRESS_INCLUDE,
         orderBy: { display_number: 'asc' },
       });
 
@@ -48,16 +43,10 @@ export async function ksRoutes(app: FastifyInstance) {
       const allData = new Map<number, LocationData>(
         locations.map((l) => [l.display_number, l]),
       );
-      const combinedGraph: Map<string, unknown> = new Map();
-      const combinedCompleted = new Set<number>();
-      for (const locDn of KS_LOCATION_DN_LIST) {
-        if (!allData.has(locDn)) continue;
-        const { graph: g, completedOptionIds: c } = buildGraphWithDeps(locDn, allData);
-        for (const [key, node] of g) combinedGraph.set(key, node);
-        for (const id of c) combinedCompleted.add(id);
-      }
-      const graph = combinedGraph as Parameters<typeof countPaths>[0];
-      const completedOptionIds = combinedCompleted;
+      const { graph, completedOptionIds } = buildCombinedGraphForLocations(
+        KS_LOCATION_DN_LIST,
+        allData,
+      );
 
       type VerseEntry = {
         verseDn: number;
@@ -72,7 +61,7 @@ export async function ksRoutes(app: FastifyInstance) {
 
       for (const loc of locations) {
         for (const verse of loc.verses) {
-          if (verse.display_number === 0 && verse.options.length === 0) continue;
+          if (isEmptyVerseZero(verse)) continue;
 
           const start = nodeKey(loc.display_number, verse.display_number);
           const pathCount = countPaths(graph, completedOptionIds, start);

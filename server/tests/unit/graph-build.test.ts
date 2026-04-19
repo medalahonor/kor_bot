@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraphWithDeps, nodeKey } from '../../src/services/graph.js';
+import { buildGraphFollowingCrossLocationDeps, nodeKey } from '../../src/services/graph.js';
 import type { LocationData } from '../../src/services/graph.js';
 
 function option(id: number, text: string, overrides: Record<string, unknown> = {}) {
@@ -24,7 +24,7 @@ function locData(verses: Array<{ dn: number; options: ReturnType<typeof option>[
   };
 }
 
-describe('buildGraphWithDeps', () => {
+describe('buildGraphFollowingCrossLocationDeps', () => {
   it('single location without cross-location refs', () => {
     const allData = new Map<number, LocationData>([
       [100, locData([
@@ -33,7 +33,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph, completedOptionIds } = buildGraphWithDeps(100, allData);
+    const { graph, completedOptionIds } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.size).toBe(2);
     expect(graph.has(nodeKey(100, 0))).toBe(true);
@@ -51,7 +51,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.size).toBe(2);
     expect(graph.has(nodeKey(100, 0))).toBe(true);
@@ -76,7 +76,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.size).toBe(3);
     expect(graph.has(nodeKey(100, 0))).toBe(true);
@@ -94,7 +94,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.size).toBe(2);
     expect(graph.has(nodeKey(100, 0))).toBe(true);
@@ -108,7 +108,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.size).toBe(1);
     // Edge still has the targetKey, but no node for it in graph
@@ -143,7 +143,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { completedOptionIds } = buildGraphWithDeps(100, allData);
+    const { completedOptionIds } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(completedOptionIds.has(1)).toBe(true);
     expect(completedOptionIds.has(2)).toBe(true);
@@ -166,7 +166,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.has(nodeKey(999, 10))).toBe(true);
   });
@@ -189,7 +189,7 @@ describe('buildGraphWithDeps', () => {
       ])],
     ]);
 
-    const { graph } = buildGraphWithDeps(100, allData);
+    const { graph } = buildGraphFollowingCrossLocationDeps(100, allData);
 
     expect(graph.has(nodeKey(999, 7))).toBe(true);
   });

@@ -6,6 +6,7 @@ import {
   type OptionStatus,
 } from '@tg/shared';
 import { route } from '../lib/registerRoute.js';
+import { isEmptyVerseZero } from '../services/graph.js';
 
 export async function locationRoutes(app: FastifyInstance) {
   route(
@@ -45,7 +46,7 @@ export async function locationRoutes(app: FastifyInstance) {
         displayNumber: location.display_number,
         name: location.name,
         verses: location.verses
-          .filter((v) => !(v.display_number === 0 && v.options.length === 0))
+          .filter((v) => !isEmptyVerseZero(v))
           .map((v) => ({
             id: v.id,
             displayNumber: v.display_number,

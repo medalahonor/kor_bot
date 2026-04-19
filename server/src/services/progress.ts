@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { sseBroker } from '../sse/broker.js';
-import { buildGraph } from './graph.js';
+import { fetchAndBuildSingleLocationGraph } from './graph.js';
 import { findDescendantOptionIds } from './graph-utils.js';
 import type { ProgressEvent, OptionStatus } from '@tg/shared';
 
@@ -56,7 +56,7 @@ export async function setOptionStatus(
     return;
   }
 
-  const { graph } = await buildGraph(
+  const { graph } = await fetchAndBuildSingleLocationGraph(
     prisma,
     option.verse.location.campaign_id,
     locationDn,

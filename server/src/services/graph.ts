@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@prisma/client';
 import type {
   NodeKey,
   Graph,
@@ -7,6 +7,18 @@ import type {
   ConditionalTarget,
   ChildOption,
 } from '../types/index.js';
+
+export const LOCATIONS_WITH_PROGRESS_INCLUDE = {
+  verses: {
+    include: {
+      options: {
+        include: { progress: true },
+        orderBy: { position: 'asc' },
+      },
+    },
+    orderBy: { display_number: 'asc' },
+  },
+} as const satisfies Prisma.locationsInclude;
 
 interface ProgressData {
   status: string;
@@ -58,6 +70,13 @@ interface RawChildOption {
 
 export function nodeKey(locationDn: number, verseDn: number): NodeKey {
   return `${locationDn}:${verseDn}`;
+}
+
+export function isEmptyVerseZero(v: {
+  display_number: number;
+  options: { length: number };
+}): boolean {
+  return v.display_number === 0 && v.options.length === 0;
 }
 
 function convertConditionalTargets(
@@ -123,13 +142,13 @@ function convertChildren(
   });
 }
 
-export interface BuildResult {
+interface BuildResult {
   graph: Graph;
   completedOptionIds: Set<number>;
   referencedLocations: Set<number>;
 }
 
-export function buildGraphFromData(
+export function buildLocationGraph(
   locationDn: number,
   locationData: LocationData,
 ): BuildResult {
@@ -188,7 +207,7 @@ export function buildGraphFromData(
 // By design: cross-location переходы обходятся рекурсивно,
 // аналогично verse-переходам. Граф строится транзитивно
 // по cross-location ссылкам.
-export function buildGraphWithDeps(
+export function buildGraphFollowingCrossLocationDeps(
   rootLocationDn: number,
   allLocationsData: Map<number, LocationData>,
 ): { graph: Graph; completedOptionIds: Set<number> } {
@@ -205,7 +224,7 @@ export function buildGraphWithDeps(
     const locData = allLocationsData.get(locDn);
     if (!locData) continue;
 
-    const { graph, completedOptionIds, referencedLocations } = buildGraphFromData(locDn, locData);
+    const { graph, completedOptionIds, referencedLocations } = buildLocationGraph(locDn, locData);
 
     for (const [key, node] of graph) {
       combinedGraph.set(key, node);
@@ -223,7 +242,22 @@ export function buildGraphWithDeps(
   return { graph: combinedGraph, completedOptionIds: combinedCompleted };
 }
 
-export async function buildGraph(
+export function buildCombinedGraphForLocations(
+  locationDns: readonly number[],
+  allData: Map<number, LocationData>,
+): { graph: Graph; completedOptionIds: Set<number> } {
+  const graph: Graph = new Map();
+  const completedOptionIds = new Set<number>();
+  for (const locDn of locationDns) {
+    if (!allData.has(locDn)) continue;
+    const sub = buildGraphFollowingCrossLocationDeps(locDn, allData);
+    for (const [key, node] of sub.graph) graph.set(key, node);
+    for (const id of sub.completedOptionIds) completedOptionIds.add(id);
+  }
+  return { graph, completedOptionIds };
+}
+
+export async function fetchAndBuildSingleLocationGraph(
   prisma: PrismaClient,
   campaignId: number,
   locationDn: number,
@@ -235,23 +269,13 @@ export async function buildGraph(
         display_number: locationDn,
       },
     },
-    include: {
-      verses: {
-        include: {
-          options: {
-            include: { progress: true },
-            orderBy: { position: 'asc' },
-          },
-        },
-        orderBy: { display_number: 'asc' },
-      },
-    },
+    include: LOCATIONS_WITH_PROGRESS_INCLUDE,
   });
 
   if (!location) {
     throw Object.assign(new Error('Location not found'), { code: 'P2025' });
   }
 
-  const { graph, completedOptionIds } = buildGraphFromData(locationDn, location);
+  const { graph, completedOptionIds } = buildLocationGraph(locationDn, location);
   return { graph, completedOptionIds };
 }

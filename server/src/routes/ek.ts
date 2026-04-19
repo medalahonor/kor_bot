@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { GetEkVersesContract, EK_LOCATION_DN_LIST } from '@tg/shared';
 import { route } from '../lib/registerRoute.js';
-import { buildGraphWithDeps, nodeKey } from '../services/graph.js';
+import {
+  buildGraphFollowingCrossLocationDeps,
+  nodeKey,
+  isEmptyVerseZero,
+  LOCATIONS_WITH_PROGRESS_INCLUDE,
+} from '../services/graph.js';
 import type { LocationData } from '../services/graph.js';
 import { countPaths } from '../services/paths.js';
 
@@ -21,17 +26,7 @@ export async function ekRoutes(app: FastifyInstance) {
           campaign_id: campaignId,
           display_number: { in: [...EK_LOCATION_DN_LIST] },
         },
-        include: {
-          verses: {
-            include: {
-              options: {
-                include: { progress: true },
-                orderBy: { position: 'asc' },
-              },
-            },
-            orderBy: { display_number: 'asc' },
-          },
-        },
+        include: LOCATIONS_WITH_PROGRESS_INCLUDE,
         orderBy: { display_number: 'asc' },
       });
 
@@ -45,7 +40,7 @@ export async function ekRoutes(app: FastifyInstance) {
 
       return {
         locations: locations.map((loc) => {
-          const { graph, completedOptionIds } = buildGraphWithDeps(loc.display_number, allData);
+          const { graph, completedOptionIds } = buildGraphFollowingCrossLocationDeps(loc.display_number, allData);
 
           type VerseEntry = {
             verseDn: number;
@@ -62,7 +57,7 @@ export async function ekRoutes(app: FastifyInstance) {
           let locCompletedCyclic = 0;
 
           for (const verse of loc.verses) {
-            if (verse.display_number === 0 && verse.options.length === 0) continue;
+            if (isEmptyVerseZero(verse)) continue;
 
             const start = nodeKey(loc.display_number, verse.display_number);
             const pathCount = countPaths(graph, completedOptionIds, start);

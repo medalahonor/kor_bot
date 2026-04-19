@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraphFromData, nodeKey } from '../../src/services/graph.js';
+import { buildLocationGraph, nodeKey } from '../../src/services/graph.js';
 
 const LOC = 42;
 
@@ -41,29 +41,29 @@ function makeLocationData(optionStatuses: Record<number, string> = {}) {
   };
 }
 
-describe('buildGraphFromData', () => {
+describe('buildLocationGraph', () => {
   it('returns empty completedOptionIds when no progress', () => {
-    const { completedOptionIds } = buildGraphFromData(LOC, makeLocationData());
+    const { completedOptionIds } = buildLocationGraph(LOC, makeLocationData());
     expect(completedOptionIds.size).toBe(0);
   });
 
   it('visited options are in completedOptionIds', () => {
-    const { completedOptionIds } = buildGraphFromData(LOC, makeLocationData({ 1: 'visited' }));
+    const { completedOptionIds } = buildLocationGraph(LOC, makeLocationData({ 1: 'visited' }));
     expect(completedOptionIds.has(1)).toBe(true);
   });
 
   it('closed options are in completedOptionIds', () => {
-    const { completedOptionIds } = buildGraphFromData(LOC, makeLocationData({ 1: 'closed' }));
+    const { completedOptionIds } = buildLocationGraph(LOC, makeLocationData({ 1: 'closed' }));
     expect(completedOptionIds.has(1)).toBe(true);
   });
 
   it('requirements_not_met options are NOT in completedOptionIds', () => {
-    const { completedOptionIds } = buildGraphFromData(LOC, makeLocationData({ 1: 'requirements_not_met' }));
+    const { completedOptionIds } = buildLocationGraph(LOC, makeLocationData({ 1: 'requirements_not_met' }));
     expect(completedOptionIds.has(1)).toBe(false);
   });
 
   it('mixed statuses: visited and closed in completed, requirements_not_met not', () => {
-    const { completedOptionIds } = buildGraphFromData(
+    const { completedOptionIds } = buildLocationGraph(
       LOC, makeLocationData({ 1: 'visited', 2: 'closed', 3: 'requirements_not_met' }),
     );
     expect(completedOptionIds.has(1)).toBe(true);
@@ -72,21 +72,21 @@ describe('buildGraphFromData', () => {
   });
 
   it('builds correct graph structure with NodeKey keys', () => {
-    const { graph } = buildGraphFromData(LOC, makeLocationData({ 1: 'visited' }));
+    const { graph } = buildLocationGraph(LOC, makeLocationData({ 1: 'visited' }));
     expect(graph.size).toBe(2);
     expect(graph.get(nodeKey(LOC, 0))!.options).toHaveLength(2);
     expect(graph.get(nodeKey(LOC, 1))!.options).toHaveLength(1);
   });
 
   it('converts verse target to node with correct key', () => {
-    const { graph } = buildGraphFromData(LOC, makeLocationData());
+    const { graph } = buildLocationGraph(LOC, makeLocationData());
     const goEdge = graph.get(nodeKey(LOC, 0))!.options[0];
     expect(goEdge.targetType).toBe('node');
     expect(goEdge.targetKey).toBe(nodeKey(LOC, 1));
   });
 
   it('converts end target correctly', () => {
-    const { graph } = buildGraphFromData(LOC, makeLocationData());
+    const { graph } = buildLocationGraph(LOC, makeLocationData());
     const stayEdge = graph.get(nodeKey(LOC, 0))!.options[1];
     expect(stayEdge.targetType).toBe('end');
     expect(stayEdge.targetKey).toBeNull();
@@ -105,7 +105,7 @@ describe('buildGraphFromData', () => {
         }],
       }],
     };
-    const { graph, referencedLocations } = buildGraphFromData(LOC, data);
+    const { graph, referencedLocations } = buildLocationGraph(LOC, data);
     const crossEdge = graph.get(nodeKey(LOC, 0))!.options[0];
     expect(crossEdge.targetType).toBe('node');
     expect(crossEdge.targetKey).toBe(nodeKey(999, 219));
@@ -131,7 +131,7 @@ describe('buildGraphFromData', () => {
         }],
       }],
     };
-    const { graph, referencedLocations } = buildGraphFromData(LOC, data);
+    const { graph, referencedLocations } = buildLocationGraph(LOC, data);
     const edge = graph.get(nodeKey(LOC, 0))!.options[0];
     expect(edge.conditionalTargets).toHaveLength(3);
     expect(edge.conditionalTargets![0]).toEqual({ condition: 'if A', targetType: 'node', targetKey: nodeKey(LOC, 5) });
@@ -158,7 +158,7 @@ describe('buildGraphFromData', () => {
         }],
       }],
     };
-    const { graph, referencedLocations } = buildGraphFromData(LOC, data);
+    const { graph, referencedLocations } = buildLocationGraph(LOC, data);
     const edge = graph.get(nodeKey(LOC, 0))!.options[0];
     expect(edge.children).toHaveLength(3);
     expect(edge.children![0].targetType).toBe('node');

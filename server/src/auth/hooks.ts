@@ -35,42 +35,40 @@ function resolveRole(user: TelegramUser): 'admin' | 'player' {
 
 const FAKE_USER: TelegramUser = { id: 1, first_name: 'Dev', username: 'dev' };
 
-export async function requireAuth(
+async function assertAuthenticated(
   request: FastifyRequest,
   reply: FastifyReply,
-) {
+): Promise<boolean> {
   if (config.noAuth) {
     request.telegramUser = FAKE_USER;
     request.telegramRole = 'admin';
-    return;
+    return true;
   }
 
   const user = extractTelegramUser(request);
   if (!user) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    await reply.status(401).send({ error: 'Unauthorized' });
+    return false;
   }
 
   request.telegramUser = user;
   request.telegramRole = resolveRole(user);
+  return true;
+}
+
+export async function requireAuth(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  await assertAuthenticated(request, reply);
 }
 
 export async function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  if (config.noAuth) {
-    request.telegramUser = FAKE_USER;
-    request.telegramRole = 'admin';
-    return;
-  }
-
-  const user = extractTelegramUser(request);
-  if (!user) {
-    return reply.status(401).send({ error: 'Unauthorized' });
-  }
-
-  request.telegramUser = user;
-  request.telegramRole = resolveRole(user);
+  const ok = await assertAuthenticated(request, reply);
+  if (!ok) return;
 
   if (request.telegramRole !== 'admin') {
     return reply.status(403).send({ error: 'Admin access required' });
