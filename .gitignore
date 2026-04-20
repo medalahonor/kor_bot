@@ -5,6 +5,7 @@ tools/
 todo.md
 design-previews/
 node_modules/
+docs/
 
 # Server
 server/node_modules/
