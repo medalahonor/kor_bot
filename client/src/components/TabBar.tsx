@@ -12,8 +12,8 @@ interface TabBarProps {
   onChange: (tab: ContextType) => void;
 }
 
-// TabBar использует base-ui примитивы напрямую (не shadcn-обёртку @/components/ui/tabs),
-// чтобы получить чистые стили без фоновой подложки у активной вкладки из default variant.
+// TabBar использует base-ui примитивы напрямую, чтобы получить чистые стили
+// без фоновой подложки у активной вкладки из default variant.
 export default function TabBar({ active, onChange }: TabBarProps) {
   return (
     <Tabs.Root value={active} onValueChange={(v) => onChange(v as ContextType)}>
