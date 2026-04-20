@@ -7,7 +7,7 @@ import type { Option } from '@tg/shared';
 // --- Mocks ---
 
 const mockNavigate = vi.fn();
-let mockParams = { dn: '104', vdn: '0' };
+let mockParams: { dn: string; vdn: string | undefined } = { dn: '104', vdn: '0' };
 vi.mock('react-router', () => ({
   useParams: () => mockParams,
   useNavigate: () => mockNavigate,
@@ -30,10 +30,10 @@ vi.mock('../api/queries', () => ({
     data: { remaining: [], completedPaths: 0, totalPaths: 0, totalCyclic: 0, completedCyclic: 0 },
   }),
   useSetOptionStatus: () => ({ mutate: vi.fn() }),
-  useEkData: () => ({ data: null, isLoading: false }),
+  useEkData: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 
-import { useLocationVerses } from '../api/queries';
+import { useLocationVerses, useEkData } from '../api/queries';
 
 // --- Helpers ---
 
@@ -325,5 +325,73 @@ describe('LocationPage: кнопка Назад', () => {
     await user.click(screen.getByText('‹ Назад'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/', { state: { tab: 'locations' } });
+  });
+});
+
+describe('LocationPage: EK verse list branch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // EK локация (1201-1204) без vdn → ek verse list
+    mockParams = { dn: '1201', vdn: undefined };
+    useAppStore.setState({
+      gameMode: false,
+      explorationPath: [],
+      showOnlyNew: false,
+    });
+    vi.mocked(useEkData).mockReturnValue({
+      data: {
+        locations: [
+          {
+            locationDn: 1201,
+            name: 'EK локация',
+            totalPaths: 5,
+            completedPaths: 2,
+            verses: [
+              { verseDn: 100, totalPaths: 3, completedPaths: 1, totalCyclic: 0, completedCyclic: 0 },
+              { verseDn: 101, totalPaths: 2, completedPaths: 2, totalCyclic: 0, completedCyclic: 0 },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useLocationVerses).mockReturnValue({
+      data: { id: 1, displayNumber: 1201, name: 'EK локация', verses: [] },
+      isLoading: false,
+    } as never);
+  });
+
+  it('рендерит список ek строф с прогрессом', () => {
+    render(<LocationPage />);
+    expect(screen.getByText('EK локация')).toBeDefined();
+    // номера строф
+    expect(screen.getByText('100')).toBeDefined();
+    expect(screen.getByText('101')).toBeDefined();
+    // счётчик локации
+    expect(screen.getByText('2/5')).toBeDefined();
+  });
+
+  it('Назад — navigate на home с tab=ek', async () => {
+    const user = userEvent.setup();
+    render(<LocationPage />);
+    await user.click(screen.getByText('‹ Назад'));
+    expect(mockNavigate).toHaveBeenCalledWith('/', { state: { tab: 'ek' } });
+  });
+
+  it('toggle "Только новые" — переключает store', async () => {
+    const user = userEvent.setup();
+    render(<LocationPage />);
+    expect(useAppStore.getState().showOnlyNew).toBe(false);
+    await user.click(screen.getByText('Только новые'));
+    expect(useAppStore.getState().showOnlyNew).toBe(true);
+  });
+
+  it('showOnlyNew=true — строфы со всеми пройденными путями скрыты', () => {
+    useAppStore.setState({ showOnlyNew: true });
+    render(<LocationPage />);
+    // verseDn=100 имеет 1/3 — остаётся
+    expect(screen.getByText('100')).toBeDefined();
+    // verseDn=101 имеет 2/2 — скрыта
+    expect(screen.queryByText('101')).toBeNull();
   });
 });
