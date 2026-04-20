@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import {
@@ -13,6 +14,17 @@ import {
   PutProgressBatchContract,
   PutProgressBodySchema,
   PutProgressBatchBodySchema,
+  GetChaptersContract,
+  CreateChapterContract,
+  CreateChapterBodySchema,
+  UpdateChapterContract,
+  UpdateChapterBodySchema,
+  DeleteChapterContract,
+  UpdateChapterLocationsContract,
+  UpdateChapterLocationsBodySchema,
+  type CreateChapterBody,
+  type UpdateChapterBody,
+  type UpdateChapterLocationsBody,
   type OptionStatus,
 } from '@tg/shared';
 
@@ -135,5 +147,118 @@ export function useBatchSetStatus() {
         body: JSON.stringify(body),
       });
     },
+  });
+}
+
+export type LocationProgressInfo = {
+  visited: number;
+  total: number;
+  visitedCyclic: number;
+  totalCyclic: number;
+};
+
+// Объединяет batch (обычные локации KoR) и EK-progress в одну Map<dn, info>.
+// EK выходит отдельным запросом, потому что их прогресс считается иначе.
+export function useLocationProgressMap(): Map<number, LocationProgressInfo> {
+  const { data: batchProgress } = useBatchProgress();
+  const { data: ekData } = useEkData();
+
+  return useMemo(() => {
+    const map = new Map<number, LocationProgressInfo>();
+    if (batchProgress) {
+      for (const item of batchProgress) {
+        map.set(item.displayNumber, {
+          visited: item.completedPaths,
+          total: item.totalPaths,
+          visitedCyclic: item.completedCyclic,
+          totalCyclic: item.totalCyclic,
+        });
+      }
+    }
+    if (ekData) {
+      for (const loc of ekData.locations) {
+        map.set(loc.locationDn, {
+          visited: loc.completedPaths,
+          total: loc.totalPaths,
+          visitedCyclic: loc.completedCyclic,
+          totalCyclic: loc.totalCyclic,
+        });
+      }
+    }
+    return map;
+  }, [batchProgress, ekData]);
+}
+
+const CHAPTERS_KEY = ['chapters', CAMPAIGN_ID] as const;
+
+export function useChapters() {
+  return useQuery({
+    queryKey: CHAPTERS_KEY,
+    queryFn: () =>
+      api(
+        `/campaigns/${CAMPAIGN_ID}/chapters`,
+        GetChaptersContract.response[200],
+      ),
+  });
+}
+
+export function useCreateChapter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateChapterBody) => {
+      const body = CreateChapterBodySchema.parse(input);
+      return api(
+        `/campaigns/${CAMPAIGN_ID}/chapters`,
+        CreateChapterContract.response[201],
+        { method: 'POST', body: JSON.stringify(body) },
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHAPTERS_KEY }),
+  });
+}
+
+export function useUpdateChapter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ chapterId, ...patch }: { chapterId: number } & UpdateChapterBody) => {
+      const body = UpdateChapterBodySchema.parse(patch);
+      return api(
+        `/chapters/${chapterId}`,
+        UpdateChapterContract.response[200],
+        { method: 'PATCH', body: JSON.stringify(body) },
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHAPTERS_KEY }),
+  });
+}
+
+export function useDeleteChapter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ chapterId }: { chapterId: number }) =>
+      api(
+        `/chapters/${chapterId}`,
+        DeleteChapterContract.response[200],
+        { method: 'DELETE' },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHAPTERS_KEY }),
+  });
+}
+
+export function useUpdateChapterLocations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      chapterId,
+      ...patch
+    }: { chapterId: number } & UpdateChapterLocationsBody) => {
+      const body = UpdateChapterLocationsBodySchema.parse(patch);
+      return api(
+        `/chapters/${chapterId}/locations`,
+        UpdateChapterLocationsContract.response[200],
+        { method: 'PATCH', body: JSON.stringify(body) },
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHAPTERS_KEY }),
   });
 }

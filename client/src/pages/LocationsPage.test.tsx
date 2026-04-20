@@ -16,6 +16,12 @@ vi.mock('../api/queries', () => ({
   useBatchProgress: () => ({ data: [] }),
   useKsVerses: () => ({ data: null, isLoading: false }),
   useEkData: () => ({ data: null, isLoading: false }),
+  useLocationProgressMap: () => new Map(),
+  useChapters: () => ({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useCreateChapter: () => ({ mutateAsync: vi.fn() }),
+  useUpdateChapter: () => ({ mutateAsync: vi.fn() }),
+  useDeleteChapter: () => ({ mutateAsync: vi.fn() }),
+  useUpdateChapterLocations: () => ({ mutateAsync: vi.fn() }),
 }));
 
 vi.mock('../stores/app', () => ({
@@ -38,12 +44,22 @@ describe('LocationsPage: tab from Router state', () => {
     mockLocationState = null;
   });
 
-  it('без Router state — activeTab = locations', () => {
+  it('без Router state — activeTab = chapters (дефолт)', () => {
     render(<LocationsPage />);
 
-    // The "Локации" tab should be active (has a specific style)
-    const locTab = screen.getByText('Локации');
-    expect(locTab).toBeDefined();
+    // Все четыре таба отрисованы в TabBar
+    expect(screen.getByText('Главы')).toBeDefined();
+    expect(screen.getByText('Локации')).toBeDefined();
+    expect(screen.getByText('Книга секретов')).toBeDefined();
+    expect(screen.getByText('Эхо краха')).toBeDefined();
+  });
+
+  it('Router state { tab: "locations" } — activeTab = locations', () => {
+    mockLocationState = { tab: 'locations' };
+    render(<LocationsPage />);
+
+    // На табе «Локации» отображается плейсхолдер поиска по локациям
+    expect(screen.getByPlaceholderText('Поиск по номеру или названию')).toBeDefined();
   });
 
   it('Router state { tab: "ks" } — activeTab = ks', () => {

@@ -259,12 +259,124 @@ function buildEkLocation(
   };
 }
 
+type ChapterRow = { id: number; campaign_id: number; code: string; title: string; menu_order: number };
+type ChapterLocationRow = { chapter_id: number; location_dn: number; sort_order: number };
+
 export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
   const locationData = buildLocationWithVerses(optionStatuses);
+
+  const chapters: ChapterRow[] = [
+    { id: 1, campaign_id: 1, code: '1', title: 'Глава 1', menu_order: 1 },
+    { id: 2, campaign_id: 1, code: '2', title: 'Глава 2', menu_order: 2 },
+    { id: 3, campaign_id: 1, code: 'empty', title: 'Пустая', menu_order: 99 },
+  ];
+  const chapterLocations: ChapterLocationRow[] = [
+    { chapter_id: 1, location_dn: 105, sort_order: 0 },
+    { chapter_id: 1, location_dn: 101, sort_order: 1 },
+    { chapter_id: 2, location_dn: 105, sort_order: 0 },
+  ];
+
+  const nextChapterId = { value: 100 };
 
   return {
     campaigns: {
       findMany: vi.fn().mockResolvedValue([CAMPAIGN]),
+      findUnique: vi.fn().mockImplementation(({ where }: any) => {
+        if (where?.id === CAMPAIGN.id) return Promise.resolve(CAMPAIGN);
+        return Promise.resolve(null);
+      }),
+    },
+    chapters: {
+      findMany: vi.fn().mockImplementation(({ where, include }: any = {}) => {
+        let rows = chapters;
+        if (where?.campaign_id !== undefined) {
+          rows = rows.filter((c) => c.campaign_id === where.campaign_id);
+        }
+        rows = [...rows].sort((a, b) => a.menu_order - b.menu_order || a.id - b.id);
+        if (include?.chapter_locations) {
+          return Promise.resolve(
+            rows.map((c) => ({
+              ...c,
+              chapter_locations: chapterLocations
+                .filter((cl) => cl.chapter_id === c.id)
+                .sort((a, b) => a.sort_order - b.sort_order || a.location_dn - b.location_dn),
+            })),
+          );
+        }
+        return Promise.resolve(rows);
+      }),
+      findUnique: vi.fn().mockImplementation(({ where, select }: any = {}) => {
+        const ch = chapters.find((c) => c.id === where?.id) ?? null;
+        if (!ch) return Promise.resolve(null);
+        if (select?._count?.select?.chapter_locations) {
+          return Promise.resolve({
+            ...ch,
+            _count: {
+              chapter_locations: chapterLocations.filter((cl) => cl.chapter_id === ch.id).length,
+            },
+          });
+        }
+        return Promise.resolve(ch);
+      }),
+      create: vi.fn().mockImplementation(({ data }: any) => {
+        const row: ChapterRow = {
+          id: nextChapterId.value++,
+          campaign_id: data.campaign_id,
+          code: data.code,
+          title: data.title,
+          menu_order: data.menu_order,
+        };
+        const dup = chapters.find((c) => c.campaign_id === row.campaign_id && c.code === row.code);
+        if (dup) return Promise.reject(Object.assign(new Error('duplicate'), { code: 'P2002' }));
+        chapters.push(row);
+        return Promise.resolve(row);
+      }),
+      update: vi.fn().mockImplementation(({ where, data }: any) => {
+        const idx = chapters.findIndex((c) => c.id === where.id);
+        if (idx < 0) return Promise.reject(Object.assign(new Error('not found'), { code: 'P2025' }));
+        const row = chapters[idx];
+        if (data.code !== undefined) row.code = data.code;
+        if (data.title !== undefined) row.title = data.title;
+        if (data.menu_order !== undefined) row.menu_order = data.menu_order;
+        return Promise.resolve(row);
+      }),
+      delete: vi.fn().mockImplementation(({ where }: any) => {
+        const idx = chapters.findIndex((c) => c.id === where.id);
+        if (idx < 0) return Promise.reject(Object.assign(new Error('not found'), { code: 'P2025' }));
+        const [removed] = chapters.splice(idx, 1);
+        return Promise.resolve(removed);
+      }),
+    },
+    chapter_locations: {
+      findMany: vi.fn().mockImplementation(({ where }: any = {}) => {
+        let rows = chapterLocations;
+        if (where?.chapter_id !== undefined) rows = rows.filter((cl) => cl.chapter_id === where.chapter_id);
+        if (where?.location_dn?.in) {
+          const dns: number[] = where.location_dn.in;
+          rows = rows.filter((cl) => dns.includes(cl.location_dn));
+        }
+        return Promise.resolve(rows.map((r) => ({ ...r })));
+      }),
+      aggregate: vi.fn().mockImplementation(({ where }: any) => {
+        const rows = chapterLocations.filter((cl) => cl.chapter_id === where.chapter_id);
+        const max = rows.length === 0 ? null : Math.max(...rows.map((r) => r.sort_order));
+        return Promise.resolve({ _max: { sort_order: max } });
+      }),
+      createMany: vi.fn().mockImplementation(({ data }: any) => {
+        for (const row of data) chapterLocations.push({ ...row });
+        return Promise.resolve({ count: data.length });
+      }),
+      deleteMany: vi.fn().mockImplementation(({ where }: any) => {
+        const dns: number[] | undefined = where.location_dn?.in;
+        const before = chapterLocations.length;
+        for (let i = chapterLocations.length - 1; i >= 0; i--) {
+          const cl = chapterLocations[i];
+          if (cl.chapter_id !== where.chapter_id) continue;
+          if (dns && !dns.includes(cl.location_dn)) continue;
+          chapterLocations.splice(i, 1);
+        }
+        return Promise.resolve({ count: before - chapterLocations.length });
+      }),
     },
     locations: {
       findMany: vi.fn().mockImplementation((args?: any) => {
@@ -441,6 +553,37 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
             });
           }),
           deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        chapter_locations: {
+          findMany: vi.fn().mockImplementation(({ where }: any = {}) => {
+            let rows = chapterLocations;
+            if (where?.chapter_id !== undefined) rows = rows.filter((cl) => cl.chapter_id === where.chapter_id);
+            if (where?.location_dn?.in) {
+              const dns: number[] = where.location_dn.in;
+              rows = rows.filter((cl) => dns.includes(cl.location_dn));
+            }
+            return Promise.resolve(rows.map((r) => ({ ...r })));
+          }),
+          aggregate: vi.fn().mockImplementation(({ where }: any) => {
+            const rows = chapterLocations.filter((cl) => cl.chapter_id === where.chapter_id);
+            const max = rows.length === 0 ? null : Math.max(...rows.map((r) => r.sort_order));
+            return Promise.resolve({ _max: { sort_order: max } });
+          }),
+          createMany: vi.fn().mockImplementation(({ data }: any) => {
+            for (const row of data) chapterLocations.push({ ...row });
+            return Promise.resolve({ count: data.length });
+          }),
+          deleteMany: vi.fn().mockImplementation(({ where }: any) => {
+            const dns: number[] | undefined = where.location_dn?.in;
+            const before = chapterLocations.length;
+            for (let i = chapterLocations.length - 1; i >= 0; i--) {
+              const cl = chapterLocations[i];
+              if (cl.chapter_id !== where.chapter_id) continue;
+              if (dns && !dns.includes(cl.location_dn)) continue;
+              chapterLocations.splice(i, 1);
+            }
+            return Promise.resolve({ count: before - chapterLocations.length });
+          }),
         },
       };
       return fn(txClient);

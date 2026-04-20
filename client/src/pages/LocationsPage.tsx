@@ -4,12 +4,16 @@ import Header from '../components/Header';
 import TabBar from '../components/TabBar';
 import LocationsTab from './locations/LocationsTab';
 import KsTab from './locations/KsTab';
+import ChaptersTab from './locations/ChaptersTab';
 import type { ContextType } from '@tg/shared';
+
+type LocationsPageState = { tab?: ContextType; chapterCode?: string };
 
 export default function LocationsPage() {
   const location = useLocation();
+  const incomingState = (location.state as LocationsPageState | null) ?? null;
   const [activeTab, setActiveTab] = useState<ContextType>(
-    (location.state as { tab?: ContextType } | null)?.tab ?? 'locations',
+    incomingState?.tab ?? 'chapters',
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [ksPage, setKsPage] = useState(1);
@@ -29,14 +33,24 @@ export default function LocationsPage() {
       <Header />
       <TabBar active={activeTab} onChange={handleTabChange} />
 
-      {activeTab === 'ks' ? (
+      {activeTab === 'chapters' && (
+        <ChaptersTab
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          initialChapterCode={incomingState?.chapterCode}
+        />
+      )}
+
+      {activeTab === 'ks' && (
         <KsTab
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           page={ksPage}
           onPageChange={setKsPage}
         />
-      ) : (
+      )}
+
+      {(activeTab === 'locations' || activeTab === 'ek') && (
         <LocationsTab
           activeTab={activeTab}
           searchQuery={searchQuery}

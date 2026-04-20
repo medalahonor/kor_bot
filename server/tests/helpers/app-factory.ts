@@ -9,6 +9,7 @@ import {
 import { setupErrorHandler } from '../../src/lib/setupErrorHandler.js';
 import { healthRoutes } from '../../src/routes/health.js';
 import { campaignRoutes } from '../../src/routes/campaigns.js';
+import { chapterRoutes } from '../../src/routes/chapters.js';
 import { locationRoutes } from '../../src/routes/locations.js';
 import { progressRoutes } from '../../src/routes/progress.js';
 import { sseRoutes } from '../../src/routes/sse.js';
@@ -42,6 +43,7 @@ export async function buildTestApp(optionStatuses: Record<number, string> = {}) 
 
   await app.register(healthRoutes, { prefix: '/api' });
   await app.register(campaignRoutes, { prefix: '/api' });
+  await app.register(chapterRoutes, { prefix: '/api' });
   await app.register(locationRoutes, { prefix: '/api' });
   await app.register(progressRoutes, { prefix: '/api' });
   await app.register(sseRoutes, { prefix: '/api' });

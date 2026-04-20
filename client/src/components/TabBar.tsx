@@ -2,6 +2,7 @@ import { Tabs } from '@base-ui/react/tabs';
 import type { ContextType } from '@tg/shared';
 
 const TABS: { id: ContextType; label: string }[] = [
+  { id: 'chapters', label: 'Главы' },
   { id: 'locations', label: 'Локации' },
   { id: 'ks', label: 'Книга секретов' },
   { id: 'ek', label: 'Эхо краха' },

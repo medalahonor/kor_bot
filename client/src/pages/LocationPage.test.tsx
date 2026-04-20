@@ -8,9 +8,11 @@ import type { Option } from '@tg/shared';
 
 const mockNavigate = vi.fn();
 let mockParams: { dn: string; vdn: string | undefined } = { dn: '104', vdn: '0' };
+let mockRouterState: unknown = null;
 vi.mock('react-router', () => ({
   useParams: () => mockParams,
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ state: mockRouterState }),
 }));
 
 vi.mock('../lib/telegram', () => ({

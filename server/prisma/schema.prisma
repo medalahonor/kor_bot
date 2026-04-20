@@ -11,7 +11,31 @@ model campaigns {
   id        Int         @id @default(autoincrement())
   source_id Int         @unique
   name      String
+  chapters  chapters[]
   locations locations[]
+}
+
+model chapters {
+  id                 Int                  @id @default(autoincrement())
+  campaign_id        Int
+  code               String
+  title              String
+  menu_order         Int
+  campaign           campaigns            @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  chapter_locations  chapter_locations[]
+
+  @@unique([campaign_id, code])
+  @@index([campaign_id])
+}
+
+model chapter_locations {
+  chapter_id   Int
+  location_dn  Int
+  sort_order   Int     @default(0)
+  chapter      chapters @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+
+  @@id([chapter_id, location_dn])
+  @@index([location_dn])
 }
 
 model locations {
