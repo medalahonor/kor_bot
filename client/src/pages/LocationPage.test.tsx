@@ -397,3 +397,115 @@ describe('LocationPage: EK verse list branch', () => {
     expect(screen.queryByText('101')).toBeNull();
   });
 });
+
+describe('LocationPage: end-option redirect to start location verse 0', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams = { dn: '104', vdn: '0' };
+    mockRouterState = null;
+    useAppStore.setState({
+      gameMode: false,
+      explorationPath: [],
+    });
+  });
+
+  it('S1 single-location end — navigate на verse 0 текущей локации, path очищен', async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({
+      gameMode: true,
+      explorationPath: [
+        { optionId: 70, verseDn: 0, locationDn: 104 },
+        { optionId: 71, verseDn: 5, locationDn: 104 },
+      ],
+    });
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(useAppStore.getState().explorationPath).toEqual([]);
+    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+  });
+
+  it('S2 cross-location end — navigate на verse 0 стартовой локации (не текущей)', async () => {
+    const user = userEvent.setup();
+    mockParams = { dn: '200', vdn: '3' };
+    useAppStore.setState({
+      gameMode: true,
+      explorationPath: [
+        { optionId: 50, verseDn: 0, locationDn: 104 },
+        { optionId: 51, verseDn: 2, locationDn: 200 },
+      ],
+    });
+    vi.mocked(useLocationVerses).mockReturnValue({
+      data: {
+        id: 2,
+        displayNumber: 200,
+        name: 'Лок 200',
+        verses: [
+          { id: 20, displayNumber: 3, options: [makeOption({ id: 60, text: 'Конец.', targetType: 'end' })] },
+        ],
+      },
+      isLoading: false,
+    } as never);
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+  });
+
+  it('S3 chapters-контекст — incomingState пробрасывается в navigate-state', async () => {
+    const user = userEvent.setup();
+    mockRouterState = { tab: 'chapters', chapterCode: 'X' };
+    useAppStore.setState({
+      gameMode: true,
+      explorationPath: [{ optionId: 70, verseDn: 0, locationDn: 104 }],
+    });
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', {
+      state: { tab: 'chapters', chapterCode: 'X' },
+    });
+  });
+
+  it('S7 gameMode=false — navigate та же, batchSetStatus не вызван', async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({
+      gameMode: false,
+      explorationPath: [{ optionId: 70, verseDn: 0, locationDn: 104 }],
+    });
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(mockBatchMutate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+  });
+
+  it('S8 refresh/empty path — fallback на текущую locationDn', async () => {
+    const user = userEvent.setup();
+    mockParams = { dn: '200', vdn: '5' };
+    useAppStore.setState({ gameMode: true, explorationPath: [] });
+    vi.mocked(useLocationVerses).mockReturnValue({
+      data: {
+        id: 2,
+        displayNumber: 200,
+        name: 'Лок 200',
+        verses: [
+          { id: 20, displayNumber: 5, options: [makeOption({ id: 60, text: 'Конец.', targetType: 'end' })] },
+        ],
+      },
+      isLoading: false,
+    } as never);
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/location/200/verse/0', { state: null });
+  });
+});

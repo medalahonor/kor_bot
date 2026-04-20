@@ -121,8 +121,9 @@ export default function LocationVerseView({
         const targetVerse = option.targetVerseDn ?? 0;
         navigate(`/location/${option.targetLocationDn}/verse/${targetVerse}`);
       } else if (option.targetType === 'end') {
+        const startLocationDn = explorationPath[0]?.locationDn ?? locationDn;
         clearPath();
-        navigate('/');
+        navigate(`/location/${startLocationDn}/verse/0`, { state: incomingState });
       } else if (option.conditionalTargets?.length) {
         const verseTarget = option.conditionalTargets.find(
           (ct) => ct.verse !== undefined && ct.target !== 'end',
@@ -138,7 +139,7 @@ export default function LocationVerseView({
         }
       }
     },
-    [gameMode, explorationPath, addToPath, clearPath, batchSetStatus, currentVerseDn, locationDn, navigate],
+    [gameMode, explorationPath, addToPath, clearPath, batchSetStatus, currentVerseDn, locationDn, navigate, incomingState],
   );
 
   const handleStatusChange = useCallback(
