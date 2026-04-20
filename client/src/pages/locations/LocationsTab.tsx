@@ -2,11 +2,14 @@ import { useMemo } from 'react';
 import LocationList from '../../components/LocationList';
 import LocationSearchBar from '../../components/LocationSearchBar';
 import StateMessage from '../../components/StateMessage';
-import { useLocations, useBatchProgress, useEkData } from '../../api/queries';
-import { getContextType, KS_LOCATION_DNS, type ContextType, type Location } from '@tg/shared';
+import { useLocations, useEkData, useLocationProgressMap } from '../../api/queries';
+import {
+  getContextType,
+  KS_LOCATION_DNS,
+  HIDDEN_LOCATION_DNS,
+  type Location,
+} from '@tg/shared';
 import { matchesLocationSearch } from '../../lib/formatLocationNumber';
-
-const HIDDEN_LOCATIONS = new Set([1101, 1102, 1103]);
 
 interface LocationsTabProps {
   activeTab: 'locations' | 'ek';
@@ -16,48 +19,23 @@ interface LocationsTabProps {
 
 export default function LocationsTab({ activeTab, searchQuery, onSearchChange }: LocationsTabProps) {
   const { data: locations, isLoading, error, refetch } = useLocations();
-  const { data: batchProgress } = useBatchProgress();
-  const { data: ekData, isLoading: ekLoading } = useEkData();
+  const { isLoading: ekLoading } = useEkData();
+  const progressMap = useLocationProgressMap();
 
   const grouped = useMemo(() => {
-    if (!locations) return { locations: [], ks: [], ek: [] };
-    const result: Record<ContextType, Location[]> = {
+    const result: Record<'locations' | 'ek', Location[]> = {
       locations: [],
-      ks: [],
       ek: [],
     };
+    if (!locations) return result;
     for (const loc of locations) {
-      if (HIDDEN_LOCATIONS.has(loc.displayNumber)) continue;
+      if (HIDDEN_LOCATION_DNS.has(loc.displayNumber)) continue;
       if (KS_LOCATION_DNS.has(loc.displayNumber)) continue;
-      result[getContextType(loc.displayNumber)].push(loc);
+      const ctx = getContextType(loc.displayNumber);
+      if (ctx === 'locations' || ctx === 'ek') result[ctx].push(loc);
     }
     return result;
   }, [locations]);
-
-  const progressMap = useMemo(() => {
-    const map = new Map<number, { visited: number; total: number; visitedCyclic: number; totalCyclic: number }>();
-    if (batchProgress) {
-      for (const item of batchProgress) {
-        map.set(item.displayNumber, {
-          visited: item.completedPaths,
-          total: item.totalPaths,
-          visitedCyclic: item.completedCyclic,
-          totalCyclic: item.totalCyclic,
-        });
-      }
-    }
-    if (ekData) {
-      for (const loc of ekData.locations) {
-        map.set(loc.locationDn, {
-          visited: loc.completedPaths,
-          total: loc.totalPaths,
-          visitedCyclic: loc.completedCyclic,
-          totalCyclic: loc.totalCyclic,
-        });
-      }
-    }
-    return map;
-  }, [batchProgress, ekData]);
 
   const currentLocations = grouped[activeTab];
 

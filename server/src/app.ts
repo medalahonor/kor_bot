@@ -8,6 +8,7 @@ import {
 import prismaPlugin from './plugins/prisma.js';
 import { setupErrorHandler } from './lib/setupErrorHandler.js';
 import { campaignRoutes } from './routes/campaigns.js';
+import { chapterRoutes } from './routes/chapters.js';
 import { locationRoutes } from './routes/locations.js';
 import { progressRoutes } from './routes/progress.js';
 import { sseRoutes } from './routes/sse.js';
@@ -44,6 +45,7 @@ export async function buildApp() {
 
   await app.register(healthRoutes, { prefix: '/api' });
   await app.register(campaignRoutes, { prefix: '/api' });
+  await app.register(chapterRoutes, { prefix: '/api' });
   await app.register(locationRoutes, { prefix: '/api' });
   await app.register(progressRoutes, { prefix: '/api' });
   await app.register(sseRoutes, { prefix: '/api' });

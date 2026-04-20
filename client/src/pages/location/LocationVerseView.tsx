@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
+import type { ContextType } from '@tg/shared';
 import ModeStrip from '../../components/ModeStrip';
 import Breadcrumb, { type BreadcrumbItem } from '../../components/Breadcrumb';
 import VerseCard from '../../components/VerseCard';
@@ -31,6 +32,8 @@ export default function LocationVerseView({
   isEk,
 }: LocationVerseViewProps) {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
+  const incomingState = (routerLocation.state as { tab?: ContextType; chapterCode?: string } | null) ?? null;
 
   const showOnlyNew = useAppStore((s) => s.showOnlyNew);
 
@@ -196,6 +199,11 @@ export default function LocationVerseView({
             if (isEk) {
               clearPath();
               navigate(`/location/${locationDn}`);
+            } else if (incomingState?.tab === 'chapters') {
+              clearPath();
+              navigate('/', {
+                state: { tab: 'chapters', chapterCode: incomingState.chapterCode },
+              });
             } else {
               const startLocationDn = explorationPath[0]?.locationDn ?? locationDn;
               const tab = getContextType(startLocationDn);

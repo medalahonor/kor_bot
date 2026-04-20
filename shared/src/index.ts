@@ -11,3 +11,4 @@ export * from './contracts/remaining.js';
 export * from './contracts/ks.js';
 export * from './contracts/ek.js';
 export * from './contracts/admin.js';
+export * from './contracts/chapters.js';
