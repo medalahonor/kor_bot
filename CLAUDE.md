@@ -11,9 +11,9 @@
 - **a) TDD для не-trivial.** Тест до merge.
 - **b) Fail-fast контракты.** Невалидный response / SSE-event / request body → явная ошибка (throw, 500, закрытие подписки с сигналом наверх). Silent skip, warn-and-continue, try/catch с глотанием запрещены — маскируют рассинхрон версий между фронтом и бэком.
 - **c) Worktree для всего не-trivial.** Всегда, без исключений (`EnterWorktree` → ветка `feature/<name>` от master).
-- **d) `/brainstorm` перед не-trivial работой.** Финальная обязательная секция brainstorm output — **Architecture note** (три поля): пути файлов где живёт новый/меняющийся код, существующие утилиты/компоненты для reuse с путями, границы модулей — что НЕ трогаем. Юзер гейтит arch-note через сам brainstorm-диалог. Если по ходу работы arch-note оказалась неверной по существу — re-trigger `/brainstorm`.
+- **d) `/brainstorm` как обязательный auto-step plan-mode.** LLM инвокает `Skill(brainstorm)` автоматом после Phase 1 research (Explore) и до architect-шага. Brainstorm получает research findings как контекст (не сырой запрос) и ведёт интерактивный диалог до концепт-документа (суть / мотивация / сценарии / границы). **Architecture note (arch-note)** производит **architect-шаг**, не brainstorm: три поля — пути файлов где живёт новый/меняющийся код, существующие утилиты/компоненты для reuse с путями, границы модулей (что НЕ трогаем). Architect обнаружил что концепт нереализуем — re-trigger `/brainstorm` с конкретным constraint. По ходу работы arch-note оказалась неверной по существу — re-trigger `/brainstorm` → architect.
 - **e) `/simplify` перед merge** для feature и debug. Для refactor `/simplify` = основная работа.
-- **f) Contract-first для full-stack.** Zod-схемы в `@tg/shared` зафиксированы до распараллеливания backend/UI. Схема — источник правды для endpoint + MSW handler.
+- **f) Contract-first для full-stack.** Zod-схемы в `@tg/shared` формируются как Zod skeleton в implementation design architect-шага (rail d) и фиксируются до начала backend-фазы. Backend и UI используют один skeleton — схема источник правды для endpoint и UI-типов.
 - **g) `/review` перед merge** для любой не-trivial ветки. Каждый finding классифицируется:
     - **Blocking**: нарушение rails, violation module boundaries из arch-note, забытые `console.log` / TODO / мёртвый код, сломанный контракт.
     - **Nitpick**: naming, микро-стиль.
@@ -27,7 +27,7 @@
 - **i) Rollback-readiness.** Каждая не-trivial фича откатывается одним `git revert` без data-corruption. Необратимые миграции — явный план миграции-отката в commit-message.
 - **j) PR/merge summary.** Финальный commit/merge message = bullet-список изменений + список ручных проверок для юзера.
 
-**Merge-blockers:** активный MSW handler, падающие тесты, незакрытые TODO, не пройден `/review` (есть открытые blocking findings), нарушение хотя бы одного из rails a-j.
+**Merge-blockers:** падающие тесты, незакрытые TODO, не пройден `/review` (есть открытые blocking findings), UI-фича без "утверждено" от юзера в чате, нарушение хотя бы одного из rails a-j.
 
 **Общие принципы кода:**
 - Осторожно с fallback — они создают неоднозначность и усложняют логику. По возможности без них.
@@ -54,48 +54,68 @@
 
 Новая фича или расширение существующей (новый use case или изменение контракта).
 
-1. Plan mode + `/brainstorm` → концепт + use cases. Финальная секция brainstorm output — **Architecture note** (rail d). Юзер гейтит через brainstorm-диалог.
+### Pre-implementation flow (inside plan-mode)
+
+Применяется к любой не-trivial фиче. Последовательные фазы внутри plan-mode:
+
+1. **Phase 1: Explore.** LLM запускает до 3 Explore agents параллельно — research кодобы по запросу юзера.
+2. **Phase 2: Brainstorm (auto).** LLM автоматом инвокает `Skill(brainstorm)` (rail d), передавая research findings как контекст (не сырой запрос). Skill ведёт интерактивный диалог до концепт-документа (суть / мотивация / сценарии / границы). Юзер прерывает ("хватит") → skill выдаёт концепт с секцией "Нерассмотрено".
+3. **Phase 3: Architect.** LLM запускает явный architect-шаг:
+    - Input: концепт-документ + research findings.
+    - Output: **arch-note** (paths / reuse / boundaries) + **implementation design** (sequencing, TDD-порядок, migration plan, test strategy, Zod skeleton для `@tg/shared`).
+    - Architect находит нереализуемость → re-trigger brainstorm с конкретным constraint.
+    - "Нерассмотрено" не пуст → architect работает по partial концепту, риски пишет в arch-note.
+4. **Phase 4: Final plan.** LLM записывает `plan.md` по фикс-template:
+    - Context
+    - Brainstorm concept
+    - Arch-note
+    - Implementation design
+    - Verification
+5. **Phase 5:** LLM вызывает `ExitPlanMode` → начинается реализация.
+
+### Implementation steps
+
+1. Pre-implementation flow (см. выше) завершён, `plan.md` утверждён юзером.
 2. Определить scope по критериям выше. Если trivial — прямо на master, дальше не идём.
 3. `EnterWorktree` → ветка `feature/<name>` от master.
-4. **Contract-first** (если full-stack): Zod-схемы в `@tg/shared` зафиксированы до распараллеливания backend/UI.
-5. Backend и UI параллельно на одной ветке:
-    - Backend: миграции → endpoint + контрактные тесты (TDD) → сервис.
-    - UI: см. раздел «UI-часть» ниже.
-    - MSW допустим если UI опережает backend; помечается как merge-blocker.
+4. **Backend-фаза** (skip если UI-only): миграции → endpoint + контрактные тесты (TDD) → сервис. Zod skeleton из architect — контракт.
+5. **UI-фаза** (skip если backend-only): **UI-iteration loop** на real API — см. подраздел ниже.
 6. `/simplify`.
 7. **Migration safety check** (если миграции трогались): rail h.
-8. Все тесты зелёные (контрактные + component). MSW удалён.
+8. Все тесты зелёные (контрактные + component).
 9. **`/review`** (rail g). Findings юзеру, гейтинг, failure-лесенка.
 10. **Rollback-readiness** (rail i).
 11. Merge `feature/<name>` → master. Commit-message = PR summary (rail j). `ExitWorktree`, удаление ветки.
 
-### UI-часть (внутри Feature)
+**Контракт меняется по ходу UI-итерации** (UI показал плохую форму данных для рендера — нужно extra field, изменить nesting) → re-trigger architect (обновление arch-note + Zod skeleton + патч backend). UI ждёт новый контракт.
 
-Применяется когда фича содержит UI.
+### UI-iteration loop (внутри Feature)
 
-1. **Чтение стиля.** Перед любой UI-правкой: `client/src/components/ui/*` (CVA-конфиги существующих компонентов), `client/src/index.css` (design tokens: `@theme`, palette, spacing, radius, typography). Следовать existing patterns по умолчанию; override — только при явной просьбе юзера.
-2. **`/ui-ux-pro-max`** — UX-рекомендации с учётом существующего стиля (шаг 1).
-3. **Production-код.** Реальные компоненты по реальным путям (`client/src/pages/<Feature>Page.tsx`, `client/src/components/<NewComponent>.tsx`). Никаких `__preview__/` или sandbox-папок. Real API вызовы по умолчанию.
-4. **MSW (edge case).** Подключать только если endpoint ещё не существует на master и UI опережает backend:
-    - Handler: `client/src/mocks/<feature>.ts`
-    - Регистрация: `client/src/main.tsx` под `import.meta.env.DEV`
-    - **Merge блокируется** пока MSW handlers не удалены и не заменены на real API-вызовы.
-5. **Component-тесты обязательны** (Vitest + Testing Library) — по use cases. Playwright e2e — по суждению.
-6. **Live preview.**
+Применяется когда фича содержит UI. Работает на real API — backend-фаза уже завершена (см. step 4 выше). Исключение: UI-only фича, где API не меняется, итерируется на существующем API.
+
+1. **Template-чеклист (pre-код, mandatory).** Перед первым UI-кодом LLM обязательно:
+    - Читает `client/src/components/ui/*` (CVA-конфиги существующих компонентов).
+    - Читает `client/src/index.css` (design tokens: `@theme`, palette, spacing, radius, typography).
+    - Дефолт viewport: **mobile 375w**. Desktop 1440w — по запросу.
+    - Рендерит применимые состояния: empty / loading / error / success. Какие нужны — говорит юзер.
+    - Следует existing patterns по умолчанию; override — только при явной просьбе юзера.
+2. **`/ui-ux-pro-max`** — **mandatory**, с учётом стиля из шага 1. UX-рекомендации до первого кода.
+3. **Production-код.** Реальные компоненты по реальным путям (`client/src/pages/<Feature>Page.tsx`, `client/src/components/<NewComponent>.tsx`). Никаких `__preview__/` или sandbox-папок. **Real API only — MSW запрещён.**
+4. **Live preview (mandatory).**
     ```
     cd <worktree-path>
     npm run dev -- --port 5174
     ```
-    Порт 5174+ (5173 занят master-stack если работает). Claude отдаёт URL юзеру. Дефолтный viewport: **mobile 375w**. Desktop 1440w — по запросу.
-7. **Итерация.** Юзер пишет правки в чат → Claude редактирует → HMR обновляет браузер. Рендерить состояния по необходимости: empty, loading, error, success — какие нужны говорит юзер.
-8. **Pixel-diff** (по команде «зафиксируй кадр»). Claude через Playwright делает скриншот текущего состояния (worktree) + скриншот того же route на master + pixel-diff с красной подсветкой + semantic annotations текстом. Скриншоты **не коммитятся**.
-9. **Утверждение.** Юзер: «утверждено». Claude коммитит правки атомарными сообщениями на `feature/<name>`.
-10. **Замена MSW на real API** — после готовности backend endpoint. Merge блокируется пока MSW в коде.
+    Порт 5174+ (5173 занят master-stack если работает). LLM отдаёт URL юзеру. **Без запуска preview merge блокируется.**
+5. **Iteration.** Юзер пишет правки в чат → LLM редактирует → HMR обновляет браузер → LLM спрашивает "ещё правки или утверждаем?".
+6. **Component-тесты обязательны** (Vitest + Testing Library) — по use cases. Playwright e2e — по суждению.
+7. **Approval-gate.** Юзер пишет "утверждено" в чате → LLM коммитит правки атомарными сообщениями на `feature/<name>`. **Без "утверждено" merge блокируется** (см. merge-blockers).
 
 **Инварианты UI:**
-- Zero drift: preview-код = production-код. Тот же путь, те же импорты, тот же стек.
+- Zero drift: код в preview = код в production. Тот же путь, те же импорты, тот же стек.
 - Одна ветка на фичу. Никакой отдельной `design/<feature>`.
-- Real API first: MSW — edge case, не дефолт.
+- **Real API only**: MSW не используется (backend-first устраняет необходимость).
+- **Backend-first**: UI-фаза стартует только после готовности backend (исключение — UI-only фича где API не меняется).
 - Стиль из кода: LLM читает `components/ui/*` и tokens перед каждой UI-правкой.
 
 ---
@@ -106,7 +126,7 @@
 
 1. Plan mode. Каждый шаг явно проговаривается.
 2. `/debug` → корневая причина + регрессионный тест, воспроизводящий баг.
-3. `/brainstorm` → реализационная ошибка vs архитектурная, есть ли похожие проблемы. Финальная секция — **Architecture note** (rail d), если фикс не trivial.
+3. `/brainstorm` (auto-step plan-mode, rail d) → реализационная ошибка vs архитектурная, есть ли похожие проблемы. Arch-note производит architect-шаг (rail d), если фикс не trivial.
 4. Scope:
     - Trivial (1-строчник без нового поведения) → прямо на master, **без регрессионного теста** (исключение ради скорости).
     - Не-trivial → `feature/<name>` + worktree, регрессионный тест обязателен.
@@ -142,7 +162,7 @@
 
 **Workflow:**
 
-1. Plan mode + `/brainstorm` → подтвердить scope по пяти признакам. Финальная секция — **Architecture note** (rail d): пути источника и назначения, reuse, границы модулей.
+1. Plan mode. `/brainstorm` auto-step (rail d) → подтвердить scope по пяти признакам. Architect-шаг производит arch-note: пути источника и назначения, reuse, границы модулей.
 2. `EnterWorktree` → ветка `feature/<name>`.
 3. `/simplify` — основная работа.
 4. **Тесты зелёные.** Правки в тестах допустимы только в whitelist:
