@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import type { ContextType } from '@tg/shared';
 import ModeStrip from '../../components/ModeStrip';
@@ -6,6 +6,9 @@ import Breadcrumb, { type BreadcrumbItem } from '../../components/Breadcrumb';
 import VerseCard from '../../components/VerseCard';
 import StateMessage from '../../components/StateMessage';
 import ShowOnlyNewToggle from '../../components/ShowOnlyNewToggle';
+import ResearchEndModal, {
+  type ResearchEndModalState,
+} from '../../components/ResearchEndModal';
 import {
   useLocationVerses,
   useLocationProgress,
@@ -15,6 +18,7 @@ import {
 } from '../../api/queries';
 import { useAppStore } from '../../stores/app';
 import { hapticSuccess, hapticLight } from '../../lib/telegram';
+import { classifyApiError } from '../../lib/classifyApiError';
 import { getContextType, type Option, type OptionStatus } from '@tg/shared';
 import { formatLocationNumber } from '../../lib/formatLocationNumber';
 
@@ -91,23 +95,45 @@ export default function LocationVerseView({
   const completedPaths = remainingData?.completedPaths ?? 0;
   const totalPaths = remainingData?.totalPaths ?? 0;
 
+  const [endModal, setEndModal] = useState<
+    | { state: ResearchEndModalState; payload: { allOptionIds: number[]; startLocationDn: number } }
+    | null
+  >(null);
+
+  const submitEnd = useCallback(
+    async (payload: { allOptionIds: number[]; startLocationDn: number }) => {
+      setEndModal({ state: 'pending', payload });
+      try {
+        await batchSetStatus.mutateAsync({
+          optionIds: payload.allOptionIds,
+          status: 'visited',
+        });
+      } catch (err) {
+        setEndModal({ state: { kind: 'error', message: classifyApiError(err) }, payload });
+        return;
+      }
+      hapticSuccess();
+      setEndModal(null);
+      clearPath();
+      navigate(`/location/${payload.startLocationDn}/verse/0`, { state: incomingState });
+    },
+    [batchSetStatus, clearPath, navigate, incomingState],
+  );
+
+  const retryEnd = useCallback(() => {
+    if (endModal) void submitEnd(endModal.payload);
+  }, [submitEnd, endModal]);
+
+  const closeEndModal = useCallback(() => {
+    setEndModal(null);
+    batchSetStatus.reset();
+  }, [batchSetStatus]);
+
   const handleOptionClick = useCallback(
-    (option: Option) => {
+    async (option: Option) => {
       if (option.targetType !== 'end') {
         addToPath(option.id, currentVerseDn, locationDn);
         hapticLight();
-      }
-
-      if (gameMode && option.targetType === 'end') {
-        const allOptionIds = [
-          ...explorationPath.map((e) => e.optionId),
-          option.id,
-        ];
-        batchSetStatus.mutate({ optionIds: allOptionIds, status: 'visited' }, {
-          onSuccess: () => {
-            hapticSuccess();
-          },
-        });
       }
 
       if (option.targetType === 'verse' && option.targetVerseDn !== null) {
@@ -122,8 +148,13 @@ export default function LocationVerseView({
         navigate(`/location/${option.targetLocationDn}/verse/${targetVerse}`);
       } else if (option.targetType === 'end') {
         const startLocationDn = explorationPath[0]?.locationDn ?? locationDn;
-        clearPath();
-        navigate(`/location/${startLocationDn}/verse/0`, { state: incomingState });
+        if (!gameMode) {
+          clearPath();
+          navigate(`/location/${startLocationDn}/verse/0`, { state: incomingState });
+          return;
+        }
+        const allOptionIds = [...explorationPath.map((e) => e.optionId), option.id];
+        await submitEnd({ allOptionIds, startLocationDn });
       } else if (option.conditionalTargets?.length) {
         const verseTarget = option.conditionalTargets.find(
           (ct) => ct.verse !== undefined && ct.target !== 'end',
@@ -139,7 +170,7 @@ export default function LocationVerseView({
         }
       }
     },
-    [gameMode, explorationPath, addToPath, clearPath, batchSetStatus, currentVerseDn, locationDn, navigate, incomingState],
+    [gameMode, explorationPath, addToPath, clearPath, currentVerseDn, locationDn, navigate, incomingState, submitEnd],
   );
 
   const handleStatusChange = useCallback(
@@ -259,6 +290,14 @@ export default function LocationVerseView({
           </div>
         )}
       </div>
+
+      {endModal !== null && (
+        <ResearchEndModal
+          state={endModal.state}
+          onRetry={retryEnd}
+          onClose={closeEndModal}
+        />
+      )}
     </div>
   );
 }

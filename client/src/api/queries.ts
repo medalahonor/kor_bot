@@ -138,6 +138,10 @@ export function useSetOptionStatus() {
   });
 }
 
+// 10 сек — верхняя граница завершения исследования перед тем как показать error.
+// Не ретраим: юзер сам решит через модалку (Повторить / Закрыть).
+const BATCH_SET_STATUS_TIMEOUT_MS = 10_000;
+
 export function useBatchSetStatus() {
   return useMutation({
     mutationFn: ({ optionIds, status }: { optionIds: number[]; status: OptionStatus }) => {
@@ -145,6 +149,7 @@ export function useBatchSetStatus() {
       return api('/progress/batch', PutProgressBatchContract.response[200], {
         method: 'PUT',
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(BATCH_SET_STATUS_TIMEOUT_MS),
       });
     },
   });

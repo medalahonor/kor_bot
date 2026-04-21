@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LocationPage from './LocationPage';
 import { useAppStore } from '../stores/app';
 import type { Option } from '@tg/shared';
+import { ApiError } from '../api/client';
 
 // --- Mocks ---
 
@@ -20,14 +21,18 @@ vi.mock('../lib/telegram', () => ({
   hapticLight: vi.fn(),
 }));
 
-const mockBatchMutate = vi.fn();
+const mockBatchMutateAsync = vi.fn();
+const mockBatchReset = vi.fn();
 
 vi.mock('../api/queries', () => ({
   useLocationVerses: vi.fn(),
   useLocationProgress: () => ({
     data: { locationDn: 104, optionStatuses: {} },
   }),
-  useBatchSetStatus: () => ({ mutate: mockBatchMutate }),
+  useBatchSetStatus: () => ({
+    mutateAsync: mockBatchMutateAsync,
+    reset: mockBatchReset,
+  }),
   useRemaining: () => ({
     data: { remaining: [], completedPaths: 0, totalPaths: 0, totalCyclic: 0, completedCyclic: 0 },
   }),
@@ -74,6 +79,7 @@ function setupVerseWith(...options: Option[]) {
 describe('LocationPage: cross-location path tracking', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBatchMutateAsync.mockResolvedValue(undefined);
     mockParams = { dn: '104', vdn: '0' };
     useAppStore.setState({
       gameMode: false,
@@ -151,10 +157,12 @@ describe('LocationPage: cross-location path tracking', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец пути.'));
 
-    expect(mockBatchMutate).toHaveBeenCalledWith(
-      { optionIds: [50, 51, 60], status: 'visited' },
-      expect.any(Object),
-    );
+    await waitFor(() => {
+      expect(mockBatchMutateAsync).toHaveBeenCalledWith({
+        optionIds: [50, 51, 60],
+        status: 'visited',
+      });
+    });
   });
 
   it('UC4: cross_location при gameMode=OFF — путь всё равно добавляется', async () => {
@@ -176,7 +184,7 @@ describe('LocationPage: cross-location path tracking', () => {
     expect(useAppStore.getState().explorationPath).toEqual([
       { optionId: 51, verseDn: 0, locationDn: 104 },
     ]);
-    expect(mockBatchMutate).not.toHaveBeenCalled();
+    expect(mockBatchMutateAsync).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/location/999/verse/0');
   });
 
@@ -197,16 +205,19 @@ describe('LocationPage: cross-location path tracking', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Тупик.'));
 
-    expect(mockBatchMutate).toHaveBeenCalledWith(
-      { optionIds: [70, 71], status: 'visited' },
-      expect.any(Object),
-    );
+    await waitFor(() => {
+      expect(mockBatchMutateAsync).toHaveBeenCalledWith({
+        optionIds: [70, 71],
+        status: 'visited',
+      });
+    });
   });
 });
 
 describe('LocationPage: breadcrumb', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBatchMutateAsync.mockResolvedValue(undefined);
     mockParams = { dn: '104', vdn: '0' };
     useAppStore.setState({
       gameMode: false,
@@ -280,6 +291,7 @@ describe('LocationPage: breadcrumb', () => {
 describe('LocationPage: кнопка Назад', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBatchMutateAsync.mockResolvedValue(undefined);
     mockParams = { dn: '104', vdn: '0' };
     useAppStore.setState({
       gameMode: false,
@@ -423,8 +435,10 @@ describe('LocationPage: end-option redirect to start location verse 0', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец.'));
 
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+    });
     expect(useAppStore.getState().explorationPath).toEqual([]);
-    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
   });
 
   it('S2 cross-location end — navigate на verse 0 стартовой локации (не текущей)', async () => {
@@ -452,7 +466,9 @@ describe('LocationPage: end-option redirect to start location verse 0', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец.'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+    });
   });
 
   it('S3 chapters-контекст — incomingState пробрасывается в navigate-state', async () => {
@@ -467,8 +483,10 @@ describe('LocationPage: end-option redirect to start location verse 0', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец.'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', {
-      state: { tab: 'chapters', chapterCode: 'X' },
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', {
+        state: { tab: 'chapters', chapterCode: 'X' },
+      });
     });
   });
 
@@ -483,7 +501,7 @@ describe('LocationPage: end-option redirect to start location verse 0', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец.'));
 
-    expect(mockBatchMutate).not.toHaveBeenCalled();
+    expect(mockBatchMutateAsync).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
   });
 
@@ -506,6 +524,127 @@ describe('LocationPage: end-option redirect to start location verse 0', () => {
     render(<LocationPage />);
     await user.click(screen.getByText('Конец.'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/location/200/verse/0', { state: null });
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/200/verse/0', { state: null });
+    });
+  });
+});
+
+describe('LocationPage: research end await-ack modal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockBatchMutateAsync.mockResolvedValue(undefined);
+    mockParams = { dn: '104', vdn: '0' };
+    mockRouterState = null;
+    useAppStore.setState({
+      gameMode: true,
+      explorationPath: [{ optionId: 70, verseDn: 0, locationDn: 104 }],
+    });
+  });
+
+  it('E1 ack-success — clearPath и navigate происходят только ПОСЛЕ resolve мутации', async () => {
+    const user = userEvent.setup();
+    let resolveMutation: () => void = () => {};
+    mockBatchMutateAsync.mockImplementationOnce(
+      () => new Promise<void>((res) => { resolveMutation = res; }),
+    );
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    // До resolve: модалка в pending, navigate не вызван, path цел
+    expect(await screen.findByText('Завершение исследования...')).toBeDefined();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(useAppStore.getState().explorationPath).toEqual([
+      { optionId: 70, verseDn: 0, locationDn: 104 },
+    ]);
+
+    resolveMutation();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+    });
+    expect(useAppStore.getState().explorationPath).toEqual([]);
+  });
+
+  it('E2 ack-error — модалка в error-state, navigate НЕ вызван, path цел', async () => {
+    const user = userEvent.setup();
+    mockBatchMutateAsync.mockRejectedValueOnce(new ApiError('boom', 500));
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(await screen.findByText('Ошибка сервера')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Закрыть' })).toBeDefined();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(useAppStore.getState().explorationPath).toEqual([
+      { optionId: 70, verseDn: 0, locationDn: 104 },
+    ]);
+  });
+
+  it('E3 retry — клик Повторить → второй mutateAsync резолвится → navigate', async () => {
+    const user = userEvent.setup();
+    mockBatchMutateAsync
+      .mockRejectedValueOnce(new ApiError('boom', 500))
+      .mockResolvedValueOnce(undefined);
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    const retryBtn = await screen.findByRole('button', { name: 'Повторить' });
+    await user.click(retryBtn);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/location/104/verse/0', { state: null });
+    });
+    expect(mockBatchMutateAsync).toHaveBeenCalledTimes(2);
+    expect(useAppStore.getState().explorationPath).toEqual([]);
+  });
+
+  it('E4 close-after-error — клик Закрыть → модалка dismiss, path цел, нет navigate', async () => {
+    const user = userEvent.setup();
+    mockBatchMutateAsync.mockRejectedValueOnce(new ApiError('boom', 500));
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    const closeBtn = await screen.findByRole('button', { name: 'Закрыть' });
+    await user.click(closeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(useAppStore.getState().explorationPath).toEqual([
+      { optionId: 70, verseDn: 0, locationDn: 104 },
+    ]);
+    expect(mockBatchReset).toHaveBeenCalled();
+  });
+
+  it('E5 timeout (AbortError) → error-state с «Сервер не отвечает»', async () => {
+    const user = userEvent.setup();
+    mockBatchMutateAsync.mockRejectedValueOnce(new DOMException('timeout', 'AbortError'));
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(await screen.findByText('Сервер не отвечает')).toBeDefined();
+  });
+
+  it('E6 network-error (TypeError) → error-state с «Нет сети»', async () => {
+    const user = userEvent.setup();
+    mockBatchMutateAsync.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    setupVerseWith(makeOption({ id: 72, text: 'Конец.', targetType: 'end' }));
+
+    render(<LocationPage />);
+    await user.click(screen.getByText('Конец.'));
+
+    expect(await screen.findByText('Нет сети')).toBeDefined();
   });
 });
