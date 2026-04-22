@@ -1,3 +1,4 @@
+import { NotebookPen } from 'lucide-react';
 import { useAppStore } from '../stores/app';
 import EditOption from './admin/EditOption';
 import StatusPicker from './StatusPicker';
@@ -17,9 +18,10 @@ interface ChoiceOptionProps {
   pending?: boolean;
   onClick: () => void;
   onStatusChange?: (optionId: number, status: OptionStatus) => void;
+  onAddNote?: () => void;
 }
 
-export default function ChoiceOption({ option, status, pending = false, onClick, onStatusChange }: ChoiceOptionProps) {
+export default function ChoiceOption({ option, status, pending = false, onClick, onStatusChange, onAddNote }: ChoiceOptionProps) {
   const adminMode = useAppStore((s) => s.adminMode);
   const isCondition = option.type === 'condition';
   const target = getTargetLabel(option);
@@ -85,11 +87,26 @@ export default function ChoiceOption({ option, status, pending = false, onClick,
         <div className="mt-1 text-xs text-green-bright opacity-90 not-italic">{option.result}</div>
       )}
 
-      {target && (
-        <div className="mt-1.5 text-right">
-          <span className={`text-[10px] ${target.className} not-italic`}>
-            {target.text}
-          </span>
+      {(target || onAddNote) && (
+        <div className="mt-1.5 flex items-center justify-end gap-2">
+          {onAddNote && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddNote();
+              }}
+              aria-label="Добавить заметку к целевой строфе"
+              className="-my-2 -mr-1 inline-flex items-center justify-center min-w-10 min-h-10 text-rune/70 hover:text-rune active:text-rune"
+            >
+              <NotebookPen className="size-5" />
+            </button>
+          )}
+          {target && (
+            <span className={`text-[10px] ${target.className} not-italic`}>
+              {target.text}
+            </span>
+          )}
         </div>
       )}
 

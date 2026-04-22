@@ -1,6 +1,9 @@
+import { useNavigate } from 'react-router';
+import { NotebookPen } from 'lucide-react';
 import ModeStrip from './ModeStrip';
 
 export default function Header() {
+  const navigate = useNavigate();
   return (
     <>
       <header
@@ -10,6 +13,14 @@ export default function Header() {
           paddingTop: 'max(12px, env(safe-area-inset-top))',
         }}
       >
+        <button
+          type="button"
+          onClick={() => navigate('/notes')}
+          aria-label="Командные заметки"
+          className="absolute right-3 top-[max(10px,env(safe-area-inset-top))] text-rune hover:text-rune/80 p-1.5 rounded-lg"
+        >
+          <NotebookPen className="size-5" />
+        </button>
         <div className="px-4 pb-2.5">
           <div className="text-rune text-xl leading-none">⟐</div>
           <h1

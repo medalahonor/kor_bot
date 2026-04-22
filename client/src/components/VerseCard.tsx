@@ -3,12 +3,14 @@ import type { Verse, Option, OptionStatus } from '@tg/shared';
 
 interface VerseCardProps {
   verse: Verse;
+  currentLocationDn?: number;
   statusMap: Map<number, OptionStatus>;
   pendingIds?: Set<number>;
   gatewayIds?: Set<number>;
   showOnlyNew: boolean;
   onOptionClick: (option: Option) => void;
   onStatusChange?: (optionId: number, status: OptionStatus) => void;
+  onAddNoteForOption?: (target: { locationDn: number; verseDn: number }) => void;
 }
 
 function getStatus(statusMap: Map<number, OptionStatus>, id: number): OptionStatus {
@@ -19,14 +21,33 @@ function isCompleted(status: OptionStatus): boolean {
   return status === 'visited' || status === 'closed';
 }
 
+function getOptionTarget(
+  option: Option,
+  currentLocationDn: number | undefined,
+): { locationDn: number; verseDn: number } | null {
+  if (option.targetType === 'verse' && option.targetVerseDn !== null && currentLocationDn != null) {
+    return { locationDn: currentLocationDn, verseDn: option.targetVerseDn };
+  }
+  if (
+    option.targetType === 'cross_location' &&
+    option.targetLocationDn != null &&
+    option.targetVerseDn != null
+  ) {
+    return { locationDn: option.targetLocationDn, verseDn: option.targetVerseDn };
+  }
+  return null;
+}
+
 export default function VerseCard({
   verse,
+  currentLocationDn,
   statusMap,
   pendingIds = new Set(),
   gatewayIds = new Set(),
   showOnlyNew,
   onOptionClick,
   onStatusChange,
+  onAddNoteForOption,
 }: VerseCardProps) {
   const filteredOptions = showOnlyNew
     ? verse.options.filter(
@@ -38,7 +59,7 @@ export default function VerseCard({
 
   if (filteredOptions.length === 0) {
     return (
-      <div className="mx-4 my-2 p-4 bg-bg-card border border-separator text-center text-text-secondary text-sm">
+      <div className="mx-4 mt-3 p-4 bg-bg-card border border-separator text-center text-text-secondary text-sm">
         <span className="text-rune/60 mr-1">⟐</span>
         Все выборы пройдены
       </div>
@@ -46,7 +67,7 @@ export default function VerseCard({
   }
 
   return (
-    <div className="mx-4 my-2 bg-bg-card border border-separator">
+    <div className="mx-4 mt-3 bg-bg-card border border-separator">
       <div
         className="px-3.5 py-3 flex items-center gap-2.5 border-b border-separator"
         style={{
@@ -66,6 +87,11 @@ export default function VerseCard({
         {filteredOptions.map((option) => {
           const status = getStatus(statusMap, option.id);
           const isGateway = gatewayIds.has(option.id);
+          const target = getOptionTarget(option, currentLocationDn);
+          const onAddNote =
+            onAddNoteForOption && target
+              ? () => onAddNoteForOption(target)
+              : undefined;
           return (
             <ChoiceOption
               key={option.id}
@@ -74,6 +100,7 @@ export default function VerseCard({
               pending={pendingIds.has(option.id)}
               onClick={() => onOptionClick(option)}
               onStatusChange={onStatusChange}
+              onAddNote={onAddNote}
             />
           );
         })}

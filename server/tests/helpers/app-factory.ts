@@ -18,6 +18,7 @@ import { ksRoutes } from '../../src/routes/ks.js';
 import { ekRoutes } from '../../src/routes/ek.js';
 import { adminOptionRoutes } from '../../src/routes/admin/options.js';
 import { adminVerseRoutes } from '../../src/routes/admin/verses.js';
+import { notesRoutes } from '../../src/routes/notes.js';
 import { createMockPrisma } from './mock-prisma.js';
 
 export type CollectedRoute = Pick<RouteOptions, 'method' | 'url' | 'schema'>;
@@ -52,6 +53,7 @@ export async function buildTestApp(optionStatuses: Record<number, string> = {}) 
   await app.register(ekRoutes, { prefix: '/api' });
   await app.register(adminOptionRoutes, { prefix: '/api' });
   await app.register(adminVerseRoutes, { prefix: '/api' });
+  await app.register(notesRoutes, { prefix: '/api' });
 
   return app;
 }

@@ -12,3 +12,4 @@ export * from './contracts/ks.js';
 export * from './contracts/ek.js';
 export * from './contracts/admin.js';
 export * from './contracts/chapters.js';
+export * from './contracts/notes.js';

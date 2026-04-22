@@ -22,9 +22,18 @@ import {
   DeleteChapterContract,
   UpdateChapterLocationsContract,
   UpdateChapterLocationsBodySchema,
+  GetCampaignNotesContract,
+  GetVerseNotesContract,
+  CreateNoteContract,
+  CreateNoteBodySchema,
+  UpdateNoteContract,
+  UpdateNoteBodySchema,
+  DeleteNoteContract,
   type CreateChapterBody,
   type UpdateChapterBody,
   type UpdateChapterLocationsBody,
+  type CreateNoteBody,
+  type UpdateNoteBody,
   type OptionStatus,
 } from '@tg/shared';
 
@@ -265,5 +274,75 @@ export function useUpdateChapterLocations() {
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: CHAPTERS_KEY }),
+  });
+}
+
+export const notesKeys = {
+  campaign: (campaignId: number = CAMPAIGN_ID) => ['notes', campaignId] as const,
+  verse: (verseId: number) => ['notes', 'verse', verseId] as const,
+  verseDisabled: ['notes', 'verse', 'disabled'] as const,
+};
+
+function invalidateNoteCaches(qc: ReturnType<typeof useQueryClient>, verseId?: number | null) {
+  qc.invalidateQueries({ queryKey: notesKeys.campaign() });
+  if (verseId != null) qc.invalidateQueries({ queryKey: notesKeys.verse(verseId) });
+}
+
+
+export function useCampaignNotes() {
+  return useQuery({
+    queryKey: notesKeys.campaign(),
+    queryFn: () =>
+      api(`/campaigns/${CAMPAIGN_ID}/notes`, GetCampaignNotesContract.response[200]),
+  });
+}
+
+export function useVerseNotes(verseId: number | null | undefined) {
+  const enabled = typeof verseId === 'number' && verseId > 0;
+  return useQuery({
+    queryKey: enabled ? notesKeys.verse(verseId) : notesKeys.verseDisabled,
+    queryFn: () =>
+      api(`/verses/${verseId}/notes`, GetVerseNotesContract.response[200]),
+    enabled,
+  });
+}
+
+export function useCreateNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateNoteBody) => {
+      const body = CreateNoteBodySchema.parse(input);
+      return api(
+        `/campaigns/${CAMPAIGN_ID}/notes`,
+        CreateNoteContract.response[201],
+        { method: 'POST', body: JSON.stringify(body) },
+      );
+    },
+    onSuccess: (note) => invalidateNoteCaches(qc, note.verseId),
+  });
+}
+
+export function useUpdateNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, ...patch }: { noteId: number } & UpdateNoteBody) => {
+      const body = UpdateNoteBodySchema.parse(patch);
+      return api(`/notes/${noteId}`, UpdateNoteContract.response[200], {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+    },
+    onSuccess: (note) => invalidateNoteCaches(qc, note.verseId),
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId }: { noteId: number }) =>
+      api(`/notes/${noteId}`, DeleteNoteContract.response[200], {
+        method: 'DELETE',
+      }),
+    onSuccess: () => invalidateNoteCaches(qc),
   });
 }

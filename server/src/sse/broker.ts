@@ -1,6 +1,13 @@
 import type { FastifyReply } from 'fastify';
 import { SseEventSchema, type SseEvent } from '@tg/shared';
 
+const EVENT_CHANNEL: Record<SseEvent['type'], 'progress' | 'notes'> = {
+  status_changed: 'progress',
+  note_created: 'notes',
+  note_updated: 'notes',
+  note_deleted: 'notes',
+};
+
 class SSEBroker {
   private clients = new Set<FastifyReply>();
   private heartbeatInterval: ReturnType<typeof setInterval>;
@@ -32,7 +39,7 @@ class SSEBroker {
 
   broadcast(event: SseEvent): void {
     const validated = SseEventSchema.parse(event);
-    const data = `event: progress\ndata: ${JSON.stringify(validated)}\n\n`;
+    const data = `event: ${EVENT_CHANNEL[validated.type]}\ndata: ${JSON.stringify(validated)}\n\n`;
     for (const reply of this.clients) {
       reply.raw.write(data);
     }

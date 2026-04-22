@@ -9,6 +9,11 @@ import ShowOnlyNewToggle from '../../components/ShowOnlyNewToggle';
 import ResearchEndModal, {
   type ResearchEndModalState,
 } from '../../components/ResearchEndModal';
+import NotesPanel from '../../components/notes/NotesPanel';
+import NoteForm from '../../components/notes/NoteForm';
+import DeleteNoteDialog from '../../components/notes/DeleteNoteDialog';
+import { useTelegramBackButton } from '../../hooks/useTelegramBackButton';
+import { useNoteFormState } from '../../hooks/useNoteFormState';
 import {
   useLocationVerses,
   useLocationProgress,
@@ -37,7 +42,11 @@ export default function LocationVerseView({
 }: LocationVerseViewProps) {
   const navigate = useNavigate();
   const routerLocation = useLocation();
-  const incomingState = (routerLocation.state as { tab?: ContextType; chapterCode?: string } | null) ?? null;
+  const incomingState = (routerLocation.state as { tab?: ContextType; chapterCode?: string; returnTo?: string } | null) ?? null;
+
+  useTelegramBackButton(incomingState?.returnTo);
+
+  const optionNoteForm = useNoteFormState();
 
   const showOnlyNew = useAppStore((s) => s.showOnlyNew);
 
@@ -85,6 +94,30 @@ export default function LocationVerseView({
   const pendingIds = useMemo(
     () => gameMode ? new Set(explorationPath.map((e) => e.optionId)) : new Set<number>(),
     [explorationPath, gameMode],
+  );
+
+  const historyPath = useMemo(
+    () =>
+      explorationPath.map((e) => ({
+        locationDn: e.locationDn,
+        verseDn: e.verseDn,
+      })),
+    [explorationPath],
+  );
+
+  const currentPath = useMemo(
+    () => [...historyPath, { locationDn, verseDn: currentVerseDn }],
+    [historyPath, locationDn, currentVerseDn],
+  );
+
+  const handleAddNoteForOption = useCallback(
+    (target: { locationDn: number; verseDn: number }) => {
+      optionNoteForm.openCreate({
+        path: [...currentPath, target],
+        locationName: locationData?.name ?? null,
+      });
+    },
+    [optionNoteForm, currentPath, locationData?.name],
   );
 
   const currentVerse = useMemo(
@@ -262,7 +295,15 @@ export default function LocationVerseView({
 
       <Breadcrumb items={breadcrumbItems} />
 
-      <div className="px-4 flex items-center justify-between">
+      {currentVerse && (
+        <NotesPanel
+          verseId={currentVerse.id}
+          defaultPath={currentPath}
+          locationName={locationData?.name ?? null}
+        />
+      )}
+
+      <div className="mt-3 px-4 flex items-center justify-between">
         <ShowOnlyNewToggle />
         <span className="text-xs text-text-secondary tabular-nums">
           {completedPaths}/{totalPaths}
@@ -275,12 +316,14 @@ export default function LocationVerseView({
         {currentVerse && (
           <VerseCard
             verse={currentVerse}
+            currentLocationDn={locationDn}
             statusMap={statusMap}
             pendingIds={pendingIds}
             gatewayIds={gatewayIds}
             showOnlyNew={showOnlyNew}
             onOptionClick={handleOptionClick}
             onStatusChange={gameMode ? handleStatusChange : undefined}
+            onAddNoteForOption={handleAddNoteForOption}
           />
         )}
 
@@ -296,6 +339,37 @@ export default function LocationVerseView({
           state={endModal.state}
           onRetry={retryEnd}
           onClose={closeEndModal}
+        />
+      )}
+
+      {optionNoteForm.form && (
+        <NoteForm
+          open
+          mode={optionNoteForm.form.mode}
+          initial={
+            optionNoteForm.form.mode === 'edit'
+              ? { type: optionNoteForm.form.note.type, body: optionNoteForm.form.note.body }
+              : undefined
+          }
+          attachmentPath={
+            optionNoteForm.form.mode === 'create'
+              ? optionNoteForm.form.target.path
+              : null
+          }
+          onSubmit={optionNoteForm.submit}
+          onClose={optionNoteForm.closeForm}
+          busy={optionNoteForm.busyForm}
+          error={optionNoteForm.formError}
+        />
+      )}
+
+      {optionNoteForm.deletingNote && (
+        <DeleteNoteDialog
+          open
+          busy={optionNoteForm.busyDelete}
+          error={optionNoteForm.deleteError}
+          onConfirm={optionNoteForm.confirmDelete}
+          onClose={optionNoteForm.closeDelete}
         />
       )}
     </div>

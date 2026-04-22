@@ -18,6 +18,7 @@ import { ekRoutes } from './routes/ek.js';
 import { adminOptionRoutes } from './routes/admin/options.js';
 import { adminVerseRoutes } from './routes/admin/verses.js';
 import { healthRoutes } from './routes/health.js';
+import { notesRoutes } from './routes/notes.js';
 import type { RouteOptions } from 'fastify';
 
 export type RegisteredRoute = Pick<RouteOptions, 'method' | 'url' | 'schema'>;
@@ -54,6 +55,7 @@ export async function buildApp() {
   await app.register(ekRoutes, { prefix: '/api' });
   await app.register(adminOptionRoutes, { prefix: '/api/admin' });
   await app.register(adminVerseRoutes, { prefix: '/api/admin' });
+  await app.register(notesRoutes, { prefix: '/api' });
 
   setupErrorHandler(app);
 
