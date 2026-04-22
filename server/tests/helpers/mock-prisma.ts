@@ -261,7 +261,7 @@ function buildEkLocation(
 
 type ChapterRow = { id: number; campaign_id: number; code: string; title: string; menu_order: number };
 type ChapterLocationRow = { chapter_id: number; location_dn: number; sort_order: number };
-type NotePathStep = { locationDn: number; verseDn: number };
+type NotePathStep = { locationDn: number; verseDn: number; optionId?: number };
 type NoteRow = {
   id: number;
   campaign_id: number;
@@ -318,7 +318,7 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
       type: 'quest',
       body: 'Найти шлем в Вагенбурге',
       verse_id: 50,
-      path: [{ locationDn: 105, verseDn: 0 }, { locationDn: 105, verseDn: 1 }],
+      path: [{ locationDn: 105, verseDn: 0, optionId: 108 }, { locationDn: 105, verseDn: 1 }],
       created_at: new Date('2026-04-20T10:00:00Z'),
     },
     {
@@ -336,7 +336,7 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
       type: 'general',
       body: 'Карта башен в старом приюте',
       verse_id: 51,
-      path: [{ locationDn: 105, verseDn: 0 }, { locationDn: 105, verseDn: 2 }],
+      path: [{ locationDn: 105, verseDn: 0, optionId: 110 }, { locationDn: 105, verseDn: 2 }],
       created_at: new Date('2026-04-20T12:00:00Z'),
     },
   ];

@@ -15,16 +15,36 @@ export type NoteBody = z.infer<typeof NoteBodySchema>;
 export const NotePathStepSchema = z.object({
   locationDn: z.number().int().nonnegative(),
   verseDn: z.number().int().nonnegative(),
+  optionId: z.number().int().positive().optional(),
 });
 export type NotePathStep = z.infer<typeof NotePathStepSchema>;
 
 /**
  * Полная история навигации от entry до target включительно.
  * path[last] — target строфа (к ней резолвится verseId и создаётся FK CASCADE).
- * Промежуточные шаги — доверенная история юзера (explorationPath + current), не валидируется на уровне БД.
+ * optionId на каждом шаге — option, по которой ушли с этого шага. На target (последнем шаге) отсутствует.
  */
-export const NotePathSchema = z.array(NotePathStepSchema).min(1).max(50);
+export const NotePathSchema = z
+  .array(NotePathStepSchema)
+  .min(1)
+  .max(50)
+  .superRefine((arr, ctx) => {
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i].optionId === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [i, 'optionId'],
+          message: 'optionId required on non-target steps',
+        });
+      }
+    }
+  });
 export type NotePath = z.infer<typeof NotePathSchema>;
+
+export function isNotePathBackfilled(path: NotePath): boolean {
+  if (path.length <= 1) return true;
+  return path.slice(0, -1).every((step) => step.optionId !== undefined);
+}
 
 export const NoteSchema = z.object({
   id: z.number().int().positive(),

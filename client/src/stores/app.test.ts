@@ -113,6 +113,45 @@ describe('explorationPath (Story 3)', () => {
   });
 });
 
+describe('replaceWithNotePath', () => {
+  it('заменяет explorationPath шагами из note.path кроме последнего (target)', () => {
+    useAppStore.getState().addToPath(999, 7, 200);
+
+    useAppStore.getState().replaceWithNotePath([
+      { locationDn: 105, verseDn: 0, optionId: 108 },
+      { locationDn: 105, verseDn: 3, optionId: 120 },
+      { locationDn: 105, verseDn: 5 },
+    ]);
+
+    expect(useAppStore.getState().explorationPath).toEqual([
+      { optionId: 108, verseDn: 0, locationDn: 105 },
+      { optionId: 120, verseDn: 3, locationDn: 105 },
+    ]);
+  });
+
+  it('замещает накопленный путь даже при single-step note (target only) → пустой path', () => {
+    useAppStore.getState().addToPath(108, 0, 104);
+    useAppStore.getState().addToPath(120, 1, 104);
+
+    useAppStore.getState().replaceWithNotePath([{ locationDn: 105, verseDn: 7 }]);
+
+    expect(useAppStore.getState().explorationPath).toEqual([]);
+  });
+
+  it('поддерживает cross-location переходы', () => {
+    useAppStore.getState().replaceWithNotePath([
+      { locationDn: 105, verseDn: 0, optionId: 200 },
+      { locationDn: 999, verseDn: 5, optionId: 300 },
+      { locationDn: 999, verseDn: 8 },
+    ]);
+
+    expect(useAppStore.getState().explorationPath).toEqual([
+      { optionId: 200, verseDn: 0, locationDn: 105 },
+      { optionId: 300, verseDn: 5, locationDn: 999 },
+    ]);
+  });
+});
+
 describe('persist', () => {
   it('showOnlyNew сохраняется в localStorage', () => {
     useAppStore.getState().toggleShowOnlyNew();
