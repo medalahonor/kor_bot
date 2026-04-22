@@ -101,6 +101,7 @@ export default function LocationVerseView({
       explorationPath.map((e) => ({
         locationDn: e.locationDn,
         verseDn: e.verseDn,
+        optionId: e.optionId,
       })),
     [explorationPath],
   );
@@ -111,13 +112,17 @@ export default function LocationVerseView({
   );
 
   const handleAddNoteForOption = useCallback(
-    (target: { locationDn: number; verseDn: number }) => {
+    (optionId: number, target: { locationDn: number; verseDn: number }) => {
       optionNoteForm.openCreate({
-        path: [...currentPath, target],
+        path: [
+          ...historyPath,
+          { locationDn, verseDn: currentVerseDn, optionId },
+          { locationDn: target.locationDn, verseDn: target.verseDn },
+        ],
         locationName: locationData?.name ?? null,
       });
     },
-    [optionNoteForm, currentPath, locationData?.name],
+    [optionNoteForm, historyPath, locationDn, currentVerseDn, locationData?.name],
   );
 
   const currentVerse = useMemo(

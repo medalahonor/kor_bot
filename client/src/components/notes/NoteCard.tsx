@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatNotePath } from '../../lib/formatLocationNumber';
 import { NOTE_LABELS } from '../../lib/noteLabels';
+import { useAppStore } from '../../stores/app';
 
 interface NoteCardProps {
   note: Note;
@@ -19,7 +20,8 @@ export default function NoteCard({ note, returnTo, onEdit, onDelete }: NoteCardP
   const target = hasAttachment ? path[path.length - 1] : null;
 
   const openVerse = () => {
-    if (!target) return;
+    if (!path || !target) return;
+    useAppStore.getState().replaceWithNotePath(path);
     navigate(`/location/${target.locationDn}/verse/${target.verseDn}`, {
       state: returnTo ? { returnTo } : undefined,
     });

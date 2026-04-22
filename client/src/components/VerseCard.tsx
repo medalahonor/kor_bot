@@ -10,7 +10,10 @@ interface VerseCardProps {
   showOnlyNew: boolean;
   onOptionClick: (option: Option) => void;
   onStatusChange?: (optionId: number, status: OptionStatus) => void;
-  onAddNoteForOption?: (target: { locationDn: number; verseDn: number }) => void;
+  onAddNoteForOption?: (
+    optionId: number,
+    target: { locationDn: number; verseDn: number },
+  ) => void;
 }
 
 function getStatus(statusMap: Map<number, OptionStatus>, id: number): OptionStatus {
@@ -90,7 +93,7 @@ export default function VerseCard({
           const target = getOptionTarget(option, currentLocationDn);
           const onAddNote =
             onAddNoteForOption && target
-              ? () => onAddNoteForOption(target)
+              ? () => onAddNoteForOption(option.id, target)
               : undefined;
           return (
             <ChoiceOption

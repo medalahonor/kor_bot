@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { NotePath } from '@tg/shared';
 
 export interface PathEntry {
   optionId: number;
@@ -18,6 +19,7 @@ interface AppState {
   addToPath: (optionId: number, verseDn: number, locationDn: number) => void;
   truncatePath: (toIndex: number) => void;
   clearPath: () => void;
+  replaceWithNotePath: (path: NotePath) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -42,6 +44,21 @@ export const useAppStore = create<AppState>()(
           explorationPath: s.explorationPath.slice(0, toIndex),
         })),
       clearPath: () => set({ explorationPath: [] }),
+      replaceWithNotePath: (path) =>
+        set({
+          explorationPath: path.slice(0, -1).map((step, index) => {
+            if (step.optionId === undefined) {
+              throw new Error(
+                `replaceWithNotePath: missing optionId at step ${index}`,
+              );
+            }
+            return {
+              optionId: step.optionId,
+              verseDn: step.verseDn,
+              locationDn: step.locationDn,
+            };
+          }),
+        }),
     }),
     {
       name: 'tg-app-settings',
