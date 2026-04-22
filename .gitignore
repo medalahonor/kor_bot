@@ -1,6 +1,9 @@
 .claude/
 data/
 scripts/
+!server/scripts/
+server/scripts/*
+!server/scripts/backfill-note-path-optionids.ts
 tools/
 todo.md
 design-previews/
