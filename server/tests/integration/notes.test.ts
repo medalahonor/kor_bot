@@ -56,7 +56,11 @@ describe('Notes API', () => {
       expect(attached).toBeDefined();
       expect(Array.isArray(attached.path)).toBe(true);
       expect(attached.path.length).toBeGreaterThan(0);
-      expect(attached.path[0]).toEqual({ locationDn: expect.any(Number), verseDn: expect.any(Number) });
+      expect(attached.path[0]).toEqual({
+        locationDn: expect.any(Number),
+        verseDn: expect.any(Number),
+        optionId: expect.any(Number),
+      });
       expect(attached.locationName).toBeTypeOf('string');
     });
 
@@ -155,7 +159,7 @@ describe('Notes API', () => {
       });
     });
 
-    it('creates attached note: resolves verseId from last path step, returns locationName', async () => {
+    it('creates attached note: resolves verseId from last path step, returns locationName, persists optionId', async () => {
       broadcastSpy.mockClear();
       const res = await app.inject({
         method: 'POST',
@@ -164,7 +168,7 @@ describe('Notes API', () => {
           type: 'quest',
           body: 'новый квест',
           path: [
-            { locationDn: 105, verseDn: 0 },
+            { locationDn: 105, verseDn: 0, optionId: 108 },
             { locationDn: 105, verseDn: 1 },
           ],
         },
@@ -174,11 +178,28 @@ describe('Notes API', () => {
       const body = res.json();
       expect(body.verseId).toBe(50);
       expect(body.path).toEqual([
-        { locationDn: 105, verseDn: 0 },
+        { locationDn: 105, verseDn: 0, optionId: 108 },
         { locationDn: 105, verseDn: 1 },
       ]);
       expect(body.locationName).toBe('Вагенбург');
       expect(broadcastSpy).toHaveBeenCalledOnce();
+    });
+
+    it('rejects multi-step path missing optionId on non-target step with 400', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns/1/notes',
+        payload: {
+          type: 'general',
+          body: 'плохой path',
+          path: [
+            { locationDn: 105, verseDn: 0 },
+            { locationDn: 105, verseDn: 1 },
+          ],
+        },
+        headers: { 'X-Telegram-Init-Data': initData },
+      });
+      expect(res.statusCode).toBe(400);
     });
 
     it('rejects body > 2000 chars with 400', async () => {
@@ -252,7 +273,7 @@ describe('Notes API', () => {
       expect(body.body).toBe('обновлено');
       expect(body.verseId).toBe(50);
       expect(body.path).toEqual([
-        { locationDn: 105, verseDn: 0 },
+        { locationDn: 105, verseDn: 0, optionId: 108 },
         { locationDn: 105, verseDn: 1 },
       ]);
       expect(broadcastSpy).toHaveBeenCalledOnce();
@@ -275,7 +296,7 @@ describe('Notes API', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().path).toEqual([
-        { locationDn: 105, verseDn: 0 },
+        { locationDn: 105, verseDn: 0, optionId: 108 },
         { locationDn: 105, verseDn: 1 },
       ]);
     });
