@@ -38,6 +38,10 @@ vi.mock('../api/queries', () => ({
   }),
   useSetOptionStatus: () => ({ mutate: vi.fn() }),
   useEkData: vi.fn(() => ({ data: null, isLoading: false })),
+  useVerseNotes: () => ({ data: [], isLoading: false }),
+  useCreateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { useLocationVerses, useEkData } from '../api/queries';

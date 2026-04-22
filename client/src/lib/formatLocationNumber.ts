@@ -20,3 +20,18 @@ export function matchesLocationSearch(dn: number, query: string): boolean {
   if (!q) return true;
   return String(dn).includes(q) || formatLocationNumber(dn).toLowerCase().includes(q);
 }
+
+/** Форматирует путь заметки как цепочку: "101 → #0 → #3 / 200 → #1" */
+export function formatNotePath(path: ReadonlyArray<{ locationDn: number; verseDn: number }>): string {
+  let out = '';
+  for (let i = 0; i < path.length; i++) {
+    const step = path[i];
+    if (i === 0) {
+      out += formatLocationNumber(step.locationDn);
+    } else if (step.locationDn !== path[i - 1].locationDn) {
+      out += ` / ${formatLocationNumber(step.locationDn)}`;
+    }
+    out += ` → #${step.verseDn}`;
+  }
+  return out;
+}

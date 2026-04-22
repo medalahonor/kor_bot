@@ -261,6 +261,39 @@ function buildEkLocation(
 
 type ChapterRow = { id: number; campaign_id: number; code: string; title: string; menu_order: number };
 type ChapterLocationRow = { chapter_id: number; location_dn: number; sort_order: number };
+type NotePathStep = { locationDn: number; verseDn: number };
+type NoteRow = {
+  id: number;
+  campaign_id: number;
+  type: 'quest' | 'hint' | 'general';
+  body: string;
+  verse_id: number | null;
+  path: NotePathStep[] | null;
+  created_at: Date;
+};
+
+const ALL_VERSES = [...VERSES_105, ...VERSES_999, ...VERSES_1001, ...VERSES_1201];
+
+function verseJoin(verseId: number | null) {
+  if (verseId === null) return null;
+  const v = ALL_VERSES.find((x) => x.id === verseId);
+  if (!v) return null;
+  const loc = LOCATIONS.find((l) => l.id === v.location_id);
+  if (!loc) return null;
+  return {
+    id: v.id,
+    display_number: v.display_number,
+    location: { id: loc.id, display_number: loc.display_number, name: loc.name },
+  };
+}
+
+function expandNote(row: NoteRow, include?: any) {
+  const base: any = { ...row };
+  if (include?.verse) {
+    base.verse = verseJoin(row.verse_id);
+  }
+  return base;
+}
 
 export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
   const locationData = buildLocationWithVerses(optionStatuses);
@@ -277,6 +310,37 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
   ];
 
   const nextChapterId = { value: 100 };
+
+  const notes: NoteRow[] = [
+    {
+      id: 1,
+      campaign_id: 1,
+      type: 'quest',
+      body: 'Найти шлем в Вагенбурге',
+      verse_id: 50,
+      path: [{ locationDn: 105, verseDn: 0 }, { locationDn: 105, verseDn: 1 }],
+      created_at: new Date('2026-04-20T10:00:00Z'),
+    },
+    {
+      id: 2,
+      campaign_id: 1,
+      type: 'hint',
+      body: 'У вендов есть зелье',
+      verse_id: null,
+      path: null,
+      created_at: new Date('2026-04-20T11:00:00Z'),
+    },
+    {
+      id: 3,
+      campaign_id: 1,
+      type: 'general',
+      body: 'Карта башен в старом приюте',
+      verse_id: 51,
+      path: [{ locationDn: 105, verseDn: 0 }, { locationDn: 105, verseDn: 2 }],
+      created_at: new Date('2026-04-20T12:00:00Z'),
+    },
+  ];
+  const nextNoteId = { value: 100 };
 
   return {
     campaigns: {
@@ -418,8 +482,19 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
           locs.map((l) => ({ ...l, _count: { verses: 3 } })),
         );
       }),
-      findUnique: vi.fn().mockImplementation(({ where }: any) => {
+      findUnique: vi.fn().mockImplementation(({ where, select }: any) => {
         const dn = where?.campaign_id_display_number?.display_number;
+        if (select) {
+          const loc = LOCATIONS.find((l) => l.display_number === dn);
+          if (!loc) return Promise.resolve(null);
+          const projected: Record<string, unknown> = {};
+          for (const k of Object.keys(select)) {
+            if ((select as Record<string, unknown>)[k]) {
+              projected[k] = (loc as unknown as Record<string, unknown>)[k];
+            }
+          }
+          return Promise.resolve(projected);
+        }
         if (dn === 105) {
           return Promise.resolve(locationData);
         }
@@ -529,6 +604,101 @@ export function createMockPrisma(optionStatuses: Record<number, string> = {}) {
         return Promise.resolve({ id: 999, ...data });
       }),
       delete: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockImplementation(({ where, select }: any) => {
+        let v: typeof ALL_VERSES[number] | undefined;
+        if (where?.id != null) {
+          v = ALL_VERSES.find((x) => x.id === where.id);
+        } else if (where?.location_id_display_number) {
+          const { location_id, display_number } = where.location_id_display_number;
+          v = ALL_VERSES.find((x) => x.location_id === location_id && x.display_number === display_number);
+        }
+        if (!v) return Promise.resolve(null);
+        if (select) {
+          const projected: Record<string, unknown> = {};
+          for (const k of Object.keys(select)) {
+            if ((select as Record<string, unknown>)[k]) {
+              projected[k] = (v as unknown as Record<string, unknown>)[k];
+            }
+          }
+          return Promise.resolve(projected);
+        }
+        return Promise.resolve(v);
+      }),
+    },
+    notes: {
+      findMany: vi.fn().mockImplementation((args: any = {}) => {
+        const { where = {}, orderBy, include } = args;
+        let rows = [...notes];
+        if (where.campaign_id !== undefined) {
+          const cid = Number(where.campaign_id);
+          rows = rows.filter((n) => n.campaign_id === cid);
+        }
+        if (where.type !== undefined) {
+          rows = rows.filter((n) => n.type === where.type);
+        }
+        if (where.verse_id !== undefined) {
+          const vid = Number(where.verse_id);
+          rows = rows.filter((n) => n.verse_id === vid);
+        }
+        if (orderBy?.created_at === 'desc') {
+          rows.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+        } else if (orderBy?.created_at === 'asc') {
+          rows.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+        }
+        return Promise.resolve(rows.map((r) => expandNote(r, include)));
+      }),
+      findUnique: vi.fn().mockImplementation(({ where, include }: any) => {
+        const id = Number(where?.id);
+        const row = notes.find((n) => n.id === id);
+        if (!row) return Promise.resolve(null);
+        return Promise.resolve(expandNote(row, include));
+      }),
+      create: vi.fn().mockImplementation(({ data, include }: any) => {
+        if (data.verse_id != null) {
+          const vid = Number(data.verse_id);
+          const exists = ALL_VERSES.some((v) => v.id === vid);
+          if (!exists) {
+            return Promise.reject(
+              Object.assign(new Error('FK violation'), { code: 'P2003' }),
+            );
+          }
+        }
+        const row: NoteRow = {
+          id: nextNoteId.value++,
+          campaign_id: Number(data.campaign_id),
+          type: data.type,
+          body: data.body,
+          verse_id: data.verse_id != null ? Number(data.verse_id) : null,
+          path: (data.path as NotePathStep[] | null | undefined) ?? null,
+          created_at: new Date(),
+        };
+        notes.push(row);
+        return Promise.resolve(expandNote(row, include));
+      }),
+      update: vi.fn().mockImplementation(({ where, data, include }: any) => {
+        const id = Number(where?.id);
+        const idx = notes.findIndex((n) => n.id === id);
+        if (idx < 0) {
+          return Promise.reject(
+            Object.assign(new Error('Not found'), { code: 'P2025' }),
+          );
+        }
+        const row = notes[idx];
+        if (data.type !== undefined) row.type = data.type;
+        if (data.body !== undefined) row.body = data.body;
+        return Promise.resolve(expandNote(row, include));
+      }),
+      delete: vi.fn().mockImplementation(({ where }: any) => {
+        const id = Number(where?.id);
+        const idx = notes.findIndex((n) => n.id === id);
+        if (idx < 0) {
+          return Promise.reject(
+            Object.assign(new Error('Not found'), { code: 'P2025' }),
+          );
+        }
+        const [removed] = notes.splice(idx, 1);
+        return Promise.resolve(removed);
+      }),
     },
     $transaction: vi.fn().mockImplementation((fn: any) => {
       // Pass the mock prisma itself as the transaction client

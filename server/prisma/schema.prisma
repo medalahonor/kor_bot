@@ -13,6 +13,7 @@ model campaigns {
   name      String
   chapters  chapters[]
   locations locations[]
+  notes     notes[]
 }
 
 model chapters {
@@ -56,6 +57,7 @@ model verses {
   display_number Int
   location       locations @relation(fields: [location_id], references: [id], onDelete: Cascade)
   options        options[]
+  notes          notes[]
 
   @@unique([location_id, display_number])
   @@index([location_id])
@@ -93,6 +95,22 @@ model progress {
   option     options  @relation(fields: [option_id], references: [id], onDelete: Cascade)
 
   @@index([option_id])
+}
+
+model notes {
+  id          Int       @id @default(autoincrement())
+  campaign_id Int
+  type        String
+  body        String
+  verse_id    Int?
+  path        Json?
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  campaign    campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  verse       verses?   @relation(fields: [verse_id], references: [id], onDelete: Cascade)
+
+  @@index([campaign_id, created_at(sort: Desc)])
+  @@index([verse_id])
+  @@index([campaign_id, type, created_at(sort: Desc)])
 }
 
 model users {
