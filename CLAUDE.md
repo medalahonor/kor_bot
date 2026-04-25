@@ -10,6 +10,7 @@
 
 - **a) TDD для не-trivial.** Тест до merge.
 - **b) Fail-fast контракты.** Невалидный response / SSE-event / request body → явная ошибка (throw, 500, закрытие подписки с сигналом наверх). Silent skip, warn-and-continue, try/catch с глотанием запрещены — маскируют рассинхрон версий между фронтом и бэком.
+- **b2) Hook API не маскируется под event handler.** Функции из hook'ов, которые могут попасть в `onClick`/`onChange`/прочие event handlers, не имеют optional non-event параметра — TS не отличает `MouseEvent` от любого совместимого по форме типа, и прямой `onClick={hook.fn}` молча принимает `MouseEvent` как аргумент. Контекст-аргумент → отдельная именованная функция (`actionFor(ctx)`). Reason: `feat(notes)` — `useNoteFormState.openCreate(target?: CreateTarget)` упал в prod-build после merge.
 - **c) Worktree для всего не-trivial.** Всегда, без исключений (`EnterWorktree` → ветка `feature/<name>` от master).
 - **d) `/brainstorm` как обязательный auto-step plan-mode.** LLM инвокает `Skill(brainstorm)` автоматом после Phase 1 research (Explore) и до architect-шага. Brainstorm получает research findings как контекст (не сырой запрос) и ведёт интерактивный диалог до концепт-документа (суть / мотивация / сценарии / границы). **Architecture note (arch-note)** производит **architect-шаг**, не brainstorm: три поля — пути файлов где живёт новый/меняющийся код, существующие утилиты/компоненты для reuse с путями, границы модулей (что НЕ трогаем). Architect обнаружил что концепт нереализуем — re-trigger `/brainstorm` с конкретным constraint. По ходу работы arch-note оказалась неверной по существу — re-trigger `/brainstorm` → architect.
 - **e) `/simplify` перед merge** для feature и debug. Для refactor `/simplify` = основная работа.
@@ -83,9 +84,10 @@
 6. `/simplify`.
 7. **Migration safety check** (если миграции трогались): rail h.
 8. Все тесты зелёные (контрактные + component).
-9. **`/review`** (rail g). Findings юзеру, гейтинг, failure-лесенка.
-10. **Rollback-readiness** (rail i).
-11. Merge `feature/<name>` → master. Commit-message = PR summary (rail j). `ExitWorktree`, удаление ветки.
+9. **Typecheck-гейт.** `npm run build` (или per-workspace `tsc -b`) — должен быть зелёным. Падение → возврат в build-фазу. Reason: `tsc -b` ловит ошибки за секунду локально, prod Dockerfile-build — за минуты.
+10. **`/review`** (rail g). Findings юзеру, гейтинг, failure-лесенка.
+11. **Rollback-readiness** (rail i).
+12. Merge `feature/<name>` → master. Commit-message = PR summary (rail j). `ExitWorktree`, удаление ветки.
 
 **Контракт меняется по ходу UI-итерации** (UI показал плохую форму данных для рендера — нужно extra field, изменить nesting) → re-trigger architect (обновление arch-note + Zod skeleton + патч backend). UI ждёт новый контракт.
 
@@ -134,9 +136,10 @@
 6. Если фикс трогает миграции — **migration safety check** (rail h).
 7. `/simplify`.
 8. Регрессионный тест проходит, существующие тесты не сломаны.
-9. **`/review`** (rail g). Findings юзеру, гейтинг, failure-лесенка.
-10. **Rollback-readiness** (если не trivial).
-11. Merge с PR summary (rail j): что было сломано, что починили, список ручных проверок.
+9. **Typecheck-гейт** (если не trivial). `npm run build` (или per-workspace `tsc -b`) — должен быть зелёным. Падение → возврат в build-фазу.
+10. **`/review`** (rail g). Findings юзеру, гейтинг, failure-лесенка.
+11. **Rollback-readiness** (если не trivial).
+12. Merge с PR summary (rail j): что было сломано, что починили, список ручных проверок.
 
 ---
 
