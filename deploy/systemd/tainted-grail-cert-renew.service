@@ -1,0 +1,13 @@
+[Unit]
+Description=Tainted Grail — Let's Encrypt cert renewal via cert.sh
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=__REPO_DIR__
+ExecStart=/bin/bash deploy/cert.sh
+StandardOutput=journal
+StandardError=journal

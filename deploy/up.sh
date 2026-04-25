@@ -13,18 +13,25 @@ if [[ ! -f .env ]]; then
     exit 1
 fi
 set -a; source .env; set +a
-for v in DOMAIN URL_PREFIX DB_PASSWORD CERTBOT_EMAIL FILM_BOT_COMPOSE; do
+for v in DOMAIN URL_PREFIX DB_PASSWORD; do
     if [[ -z "${!v:-}" ]]; then
         echo "ERROR: не задано $v в .env"
         exit 1
     fi
 done
 
-# 2. Серт
+# 2. Серт (fail-fast: up.sh не выпускает серт сам)
 CERT="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 if [[ ! -f "$CERT" ]]; then
-    echo "→ Серт не найден, выпускаем"
-    bash deploy/cert.sh
+    echo "ERROR: серт не найден ($CERT)."
+    echo "  Первый раз на хосте:    sudo make setup"
+    echo "  Аварийный перевыпуск:   sudo make cert-rotate"
+    exit 1
+fi
+if [[ ! -r "$CERT" ]]; then
+    echo "ERROR: серт существует, но недоступен на чтение текущему пользователю ($CERT)."
+    echo "  Запусти повторно: sudo make setup (выставит ACL для bot)"
+    exit 1
 fi
 
 # 3. git pull (если в репо)
