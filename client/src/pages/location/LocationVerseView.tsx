@@ -113,7 +113,7 @@ export default function LocationVerseView({
 
   const handleAddNoteForOption = useCallback(
     (optionId: number, target: { locationDn: number; verseDn: number }) => {
-      optionNoteForm.openCreate({
+      optionNoteForm.openCreateFor({
         path: [
           ...historyPath,
           { locationDn, verseDn: currentVerseDn, optionId },

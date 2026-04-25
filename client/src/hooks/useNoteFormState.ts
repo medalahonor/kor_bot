@@ -29,10 +29,13 @@ export function useNoteFormState({ defaultTarget, onCreated }: UseNoteFormStateO
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
 
-  const openCreate = (target?: CreateTarget) => {
+  const startCreate = (target: CreateTarget) => {
     setFormError(null);
-    setForm({ mode: 'create', target: target ?? defaultTarget ?? EMPTY_TARGET });
+    setForm({ mode: 'create', target });
   };
+
+  const openCreate = () => startCreate(defaultTarget ?? EMPTY_TARGET);
+  const openCreateFor = startCreate;
 
   const openEdit = (note: Note) => {
     setFormError(null);
@@ -76,6 +79,7 @@ export function useNoteFormState({ defaultTarget, onCreated }: UseNoteFormStateO
     deletingNote,
     deleteError,
     openCreate,
+    openCreateFor,
     openEdit,
     closeForm,
     submit,
