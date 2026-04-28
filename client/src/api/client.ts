@@ -28,7 +28,7 @@ export async function api<S extends ZodTypeAny>(
   options?: RequestInit,
 ): Promise<z.infer<S>> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options?.body != null ? { 'Content-Type': 'application/json' } : {}),
     ...(options?.headers as Record<string, string>),
   };
 

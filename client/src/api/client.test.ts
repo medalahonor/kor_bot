@@ -76,4 +76,16 @@ describe('api', () => {
     const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(init.headers['X-Telegram-Init-Data']).toBe('test-init-data');
   });
+
+  it('не выставляет Content-Type для запроса без body (DELETE/GET)', async () => {
+    await api('/notes/14', OkSchema, { method: 'DELETE' });
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers['Content-Type']).toBeUndefined();
+  });
+
+  it('выставляет Content-Type: application/json для запроса с body (POST/PUT)', async () => {
+    await api('/notes', OkSchema, { method: 'POST', body: JSON.stringify({ x: 1 }) });
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers['Content-Type']).toBe('application/json');
+  });
 });
